@@ -30,6 +30,10 @@ def read_and_save_file():
     st.session_state["user_input"] = ""
 
     for file in st.session_state["file_uploader"]:
+        
+        _, file_extension = os.path.splitext(file.name)
+        file_extension = file_extension.lower()
+
         with tempfile.NamedTemporaryFile(delete=False) as tf:
             tf.write(file.getbuffer())
             file_path = tf.name
