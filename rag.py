@@ -50,7 +50,7 @@ class ChatPDF:
         self.tools = [retriever_tool]
 
         self.agent = create_react_agent(llm=self.model, tools=self.tools, prompt=self.prompt, )
-        self.agent_executor = AgentExecutor(agent=self.agent, tools=self.tools, verbose=True, max_iterations=4, return_intermediate_steps=True, handle_parsing_errors=True)
+        self.agent_executor = AgentExecutor(agent=self.agent, tools=self.tools, verbose=True, max_iterations=10, return_intermediate_steps=True, handle_parsing_errors=True)
 
     def ingest(self, pdf_file_path: str):
         print("Ingesting...")
@@ -88,3 +88,4 @@ class ChatPDF:
         self.agent = None
         self.agent_executor = None
         self.tools = []
+        self.chat_history = ""

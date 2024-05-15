@@ -26,7 +26,7 @@ def process_input():
 
 def read_and_save_file():
     st.session_state["assistant"].clear()
-    st.session_state["messages"] = []
+    # st.session_state["messages"] = []
     st.session_state["user_input"] = ""
 
     for file in st.session_state["file_uploader"]:
