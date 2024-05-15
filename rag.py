@@ -7,6 +7,9 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema.runnable import RunnablePassthrough
 from langchain.prompts import PromptTemplate
 from langchain.vectorstores.utils import filter_complex_metadata
+from config import Config as cfg
+
+from langchain import hub
 
 
 class ChatPDF:
@@ -16,18 +19,9 @@ class ChatPDF:
 
     def __init__(self):
         print("Constructor ChatPDF called...")
-        self.model = ChatOllama(model="mistral")
-        self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=100)
-        self.prompt = PromptTemplate.from_template(
-            """
-            <s> [INST] Vous êtes un assistant pour les tâches de réponse aux questions. Utilisez les éléments de contexte suivants pour répondre à la question. 
-            Si vous ne connaissez pas la réponse, dites simplement que vous ne savez pas.. Utilisez trois phrases
-             maximum et soyez concis dans votre réponse. [/INST] </s> 
-            [INST] Question: {question} 
-            Context: {context} 
-            Answer: [/INST]
-            """
-        )
+        self.model = ChatOllama(model=cfg.MODEL)
+        self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=cfg.SPLITTER_CHUNK_SIZE, chunk_overlap=cfg.SPLITTER_CHUNK_OVERLAP)
+        self.prompt =  hub.pull("hwchase17/react-chat")
 
     def ingest(self, pdf_file_path: str):
         docs = PyPDFLoader(file_path=pdf_file_path).load()
@@ -38,8 +32,8 @@ class ChatPDF:
         self.retriever = vector_store.as_retriever(
             search_type="similarity_score_threshold",
             search_kwargs={
-                "k": 3,
-                "score_threshold": 0.5,
+                "k": cfg.N_DOCUMENTS_TO_RETRIEVE,
+                "score_threshold": cfg.RETRIEVER_SCORE_THRESHOLD,
             },
         )
 
