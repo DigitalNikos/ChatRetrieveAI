@@ -17,6 +17,8 @@ from typing import List
 
 from langchain_core.documents import Document
 
+from get_tools import create_tool
+
 class ChatPDF:
     vector_store = None
     retriever = None
@@ -27,7 +29,34 @@ class ChatPDF:
         self.model = ChatOllama(model=cfg.MODEL)
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=cfg.SPLITTER_CHUNK_SIZE, chunk_overlap=cfg.SPLITTER_CHUNK_OVERLAP)
 
-        self.prompt =  hub.pull("hwchase17/react-chat")
+        # self.prompt =  hub.pull("hwchase17/react-chat")
+        self.prompt = PromptTemplate.from_template("""
+        You are in a conversation with a human. Answer the following questions as best you can. You have access to the following tools:
+        {tools}
+
+        Always use the Private knowledge base tool first. At any time to the following format:
+
+        Question: the input question you must answer
+        Thought: you should always think about what to do
+        Action: the action to take, should be one of [{tool_names}]
+        Action Input: the input to the action
+        Observation: the result of the action
+        Thought: I now know the final answer
+        Final Answer: the final answer to the original input question <the source of the final answer>
+
+        Make sure to write Final Answer: at the end of your response if you are ready to answer
+
+        Begin!
+                                                   
+        Question: {input}
+        Thought:{agent_scratchpad}                                           
+        You will also have access to the previous conversation history to help you answer the question (it may also be irrelevant so think before using). Please use it to your advantage.
+        Previous conversation history:
+        {chat_history}
+
+        New input: {input}
+        {agent_scratchpad}
+        """)
 
         self.agent = None
         self.agent_executor = None
@@ -46,8 +75,9 @@ class ChatPDF:
             },
         )
 
-        retriever_tool = create_retriever_tool(self.retriever, name="Private knowledge base", description="YOU MUST ALWAYS USE THIS AS YOUR FIRST TOOL. Lookup information in a private knowledge base.")
-        self.tools = [retriever_tool]
+        retriever_tool = create_tool("retriever", name="Private knowledge base", description="YOU MUST ALWAYS USE THIS AS YOUR FIRST TOOL. Lookup information in a private knowledge base.", retriever=self.retriever)
+        wiki_tool = create_tool("wikipedia", name="Wikipedia search", description="Whenever you cannot answer the question based on the private knowledge base use this tool instead.")
+        self.tools = [retriever_tool, wiki_tool]
 
         self.agent = create_react_agent(llm=self.model, tools=self.tools, prompt=self.prompt, )
         self.agent_executor = AgentExecutor(agent=self.agent, tools=self.tools, verbose=True, max_iterations=10, return_intermediate_steps=True, handle_parsing_errors=True)
@@ -64,13 +94,6 @@ class ChatPDF:
         else:
             self.retriever.add_documents(chunks)
 
-        
-
-
-        # self.chain = ({"context": self.retriever, "question": RunnablePassthrough()}
-        #               | self.prompt
-        #               | self.model
-        #               | StrOutputParser())
 
     def ask(self, query: str):
         if not self.agent_executor:
