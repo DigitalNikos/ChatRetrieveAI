@@ -65,8 +65,8 @@ class ChatPDF:
         self.retriever = None
     
     def initialize(self, chunks: List[Document]):
-        print("Initializing")
-        vector_store = Chroma.from_documents(documents=chunks, embedding=FastEmbedEmbeddings())
+        print("---Calling initialize function---")
+        vector_store = Chroma.from_documents(documents=chunks, collection_name="rag-chroma", embedding=FastEmbedEmbeddings())
         self.retriever = vector_store.as_retriever(
             search_type="similarity_score_threshold",
             search_kwargs={
@@ -75,16 +75,22 @@ class ChatPDF:
             },
         )
 
-        retriever_tool = create_tool("retriever", name="Private knowledge base", description="YOU MUST ALWAYS USE THIS AS YOUR FIRST TOOL. Lookup information in a private knowledge base.", retriever=self.retriever)
+        # retriever_tool = create_tool("retriever", name="Private knowledge base", description="YOU MUST ALWAYS USE THIS AS YOUR FIRST TOOL. Lookup information in a private knowledge base.", retriever=self.retriever)
         wiki_tool = create_tool("wikipedia", name="Wikipedia search", description="Whenever you cannot answer the question based on the private knowledge base use this tool instead.")
-        self.tools = [retriever_tool, wiki_tool]
+        self.tools = [wiki_tool]
 
         self.agent = create_react_agent(llm=self.model, tools=self.tools, prompt=self.prompt, )
         self.agent_executor = AgentExecutor(agent=self.agent, tools=self.tools, verbose=True, max_iterations=10, return_intermediate_steps=True, handle_parsing_errors=True)
 
     def ingest(self, pdf_file_path: str):
-        print("Ingesting...")
+        print("---Calling ingest function---")
         docs = PyPDFLoader(file_path=pdf_file_path).load()
+
+        self.text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+            chunk_size=250, chunk_overlap=0
+        )
+
+
 
         chunks = self.text_splitter.split_documents(docs)
         chunks = filter_complex_metadata(chunks)
