@@ -6,7 +6,8 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema.runnable import RunnablePassthrough
 from langchain.prompts import PromptTemplate
-from langchain.vectorstores.utils import filter_complex_metadata
+# from langchain.vectorstores.utils import filter_complex_metadata
+from langchain_community.vectorstores.utils import filter_complex_metadata
 from config import Config as cfg
 from langchain.tools.retriever import create_retriever_tool
 
@@ -25,7 +26,7 @@ class ChatPDF:
     chain = None
 
     def __init__(self):
-        print("Constructor ChatPDF called...")
+        print("---Calling ChatPDF init function---")
         self.model = ChatOllama(model=cfg.MODEL)
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=cfg.SPLITTER_CHUNK_SIZE, chunk_overlap=cfg.SPLITTER_CHUNK_OVERLAP)
 
@@ -75,9 +76,9 @@ class ChatPDF:
             },
         )
 
-        # retriever_tool = create_tool("retriever", name="Private knowledge base", description="YOU MUST ALWAYS USE THIS AS YOUR FIRST TOOL. Lookup information in a private knowledge base.", retriever=self.retriever)
+        retriever_tool = create_tool("retriever", name="Private knowledge base", description="YOU MUST ALWAYS USE THIS AS YOUR FIRST TOOL. Lookup information in a private knowledge base.", retriever=self.retriever)
         wiki_tool = create_tool("wikipedia", name="Wikipedia search", description="Whenever you cannot answer the question based on the private knowledge base use this tool instead.")
-        self.tools = [wiki_tool]
+        self.tools = [retriever_tool, wiki_tool]
 
         self.agent = create_react_agent(llm=self.model, tools=self.tools, prompt=self.prompt, )
         self.agent_executor = AgentExecutor(agent=self.agent, tools=self.tools, verbose=True, max_iterations=10, return_intermediate_steps=True, handle_parsing_errors=True)
@@ -89,8 +90,6 @@ class ChatPDF:
         self.text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
             chunk_size=250, chunk_overlap=0
         )
-
-
 
         chunks = self.text_splitter.split_documents(docs)
         chunks = filter_complex_metadata(chunks)
