@@ -6,3 +6,5 @@ tiktoken
 fastembed
 chromadb
 wikipedia
+langgraph
+langchainhub

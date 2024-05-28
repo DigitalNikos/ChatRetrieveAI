@@ -3,14 +3,28 @@ import tempfile
 import streamlit as st
 from streamlit_chat import message
 from rag import ChatPDF
+from langchain_core.documents import Document
 
 st.set_page_config(page_title="ChatPDF")
 
 
 def display_messages():
+    # st.subheader("Chat")
+    # for i, (msg, is_user) in enumerate(st.session_state["messages"]):
+    #     message(msg, is_user=is_user, key=str(i))
+    # st.session_state["thinking_spinner"] = st.empty()
+
     st.subheader("Chat")
     for i, (msg, is_user) in enumerate(st.session_state["messages"]):
-        message(msg, is_user=is_user, key=str(i))
+        # Ensure the message is JSON serializable
+        if isinstance(msg, str):
+            display_msg = msg
+        elif isinstance(msg, Document):  # Assuming Document is the type causing issues
+            display_msg = msg.page_content  # or extract relevant text from the Document
+        else:
+            display_msg = str(msg)  # Convert to string or handle as needed
+        
+        message(display_msg, is_user=is_user, key=str(i))
     st.session_state["thinking_spinner"] = st.empty()
 
 
@@ -25,7 +39,7 @@ def process_input():
 
 
 def read_and_save_file():
-    st.session_state["assistant"].clear()
+    # st.session_state["assistant"].clear()
     # st.session_state["messages"] = []
     st.session_state["user_input"] = ""
 
