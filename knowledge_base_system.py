@@ -148,7 +148,6 @@ class KnowledgeBaseSystem:
 
         print("---WIKIPEDIA SEARCH---")
         prompt = hub.pull("hwchase17/react-chat")
-        print("---PULL the prompt---")
         question = state["question"]
         print("---Retrive question from state---")
         print("QUESTION:", question)
