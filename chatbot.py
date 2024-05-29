@@ -19,10 +19,10 @@ def display_messages():
         # Ensure the message is JSON serializable
         if isinstance(msg, str):
             display_msg = msg
-        elif isinstance(msg, Document):  # Assuming Document is the type causing issues
-            display_msg = msg.page_content  # or extract relevant text from the Document
+        elif isinstance(msg, Document):  
+            display_msg = msg.page_content  
         else:
-            display_msg = str(msg)  # Convert to string or handle as needed
+            display_msg = str(msg)  
         
         message(display_msg, is_user=is_user, key=str(i))
     st.session_state["thinking_spinner"] = st.empty()

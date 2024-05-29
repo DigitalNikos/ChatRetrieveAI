@@ -12,6 +12,17 @@ from langchain.agents import AgentExecutor
 from langchain import hub
 from langgraph.graph import END, StateGraph
 
+from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import FastEmbedEmbeddings
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.vectorstores.utils import filter_complex_metadata
+from config import Config as cfg
+from get_tools import create_tool
+from typing import List
+
+from langchain_core.documents import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
 class KnowledgeBaseSystem:
 
     class GraphState(TypedDict):
@@ -28,9 +39,9 @@ class KnowledgeBaseSystem:
         generation: str
         documents: List[str]
 
-    def __init__(self, retriever, llm_name: str):
-        self.retriever = retriever
-        
+    def __init__(self, llm_name: str):        
+        self.retriever = None
+
         # LLMs
         self.json_llm = ChatOllama(model=llm_name, format="json", temperature=0)
         self.llm = ChatOllama(model=llm_name, temperature=0)
@@ -52,12 +63,39 @@ class KnowledgeBaseSystem:
         self.app = None
         self.initialize_graph()
 
+    def initialize(self, chunks: List[Document]):
+        print("---Initialize ChatPDF---")
+        vector_store = Chroma.from_documents(documents=chunks, collection_name="rag-chroma", embedding=FastEmbedEmbeddings())
+        self.retriever = vector_store.as_retriever(
+            search_type="similarity_score_threshold",
+            search_kwargs={
+                "k": cfg.N_DOCUMENTS_TO_RETRIEVE,
+                "score_threshold": cfg.RETRIEVER_SCORE_THRESHOLD,
+            },
+        )
+
+    def ingest(self, pdf_file_path: str):
+        print("---Ingest ChatPDF---")
+        docs = PyPDFLoader(file_path=pdf_file_path).load()
+
+        self.text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+            chunk_size=cfg.SPLITTER_CHUNK_SIZE, chunk_overlap=cfg.SPLITTER_CHUNK_OVERLAP
+        )
+
+        chunks = self.text_splitter.split_documents(docs)
+        chunks = filter_complex_metadata(chunks)
+
+        if not self.retriever:
+            self.initialize(chunks)
+        else:
+            self.retriever.add_documents(chunks)
+
     # Post-processing
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
 
 
-    def retrieve(self, state: GraphState):
+    def _retrieve(self, state: GraphState):
         """
         Retrieve documents
 
@@ -67,6 +105,9 @@ class KnowledgeBaseSystem:
         Returns:
             state (dict): New key added to state, documents, that contains retrieved documents
         """
+        if self.retriever is None: # or raise error
+            return {"documents": [], "question": state["question"]}
+        
         print("---RETRIEVE---")
         question = state["question"]
 
@@ -75,7 +116,7 @@ class KnowledgeBaseSystem:
         return {"documents": documents, "question": question}
 
 
-    def generate(self, state: GraphState):
+    def _generate(self, state: GraphState):
         """
         Generate answer
 
@@ -94,7 +135,7 @@ class KnowledgeBaseSystem:
         return {"documents": documents, "question": question, "generation": generation}
 
 
-    def grade_documents(self, state: GraphState):
+    def _grade_documents(self, state: GraphState):
         """
         Determines whether the retrieved documents are relevant to the question.
 
@@ -125,7 +166,7 @@ class KnowledgeBaseSystem:
         return {"documents": filtered_docs, "question": question}
 
 
-    def transform_query(self, state: GraphState):
+    def _transform_query(self, state: GraphState):
         """
         Transform the query to produce a better question.
 
@@ -144,50 +185,42 @@ class KnowledgeBaseSystem:
         better_question = self.question_rewriter_chain.invoke({"question": question})
         return {"documents": documents, "question": better_question}
 
-    def wikipedia_search(self, state: GraphState):
+    def _wikipedia_search(self, state: GraphState):
+        """
+        Perform a search using Wikipedia to retrieve information.
+
+        Args:
+            state (dict): The current graph state
+
+        Returns:
+            state (dict): Updates the state with the original question and the generated answer from Wikipedia
+        """
 
         print("---WIKIPEDIA SEARCH---")
         prompt = hub.pull("hwchase17/react-chat")
         question = state["question"]
-        print("---Retrive question from state---")
-        print("QUESTION:", question)
-        documents = state["documents"]
-        print("---Retrive documents from state---")
-        print("DOCUMENTS:", documents)
-        description = "Search for information in Wikipedia. Whenever you cannot answer the question based on the private knowledge base use wikipedia tool instead."
-        api_wrapper = WikipediaAPIWrapper(top_k_results=1, doc_content_chars_max=1000)
-        print("---Create WikipediaAPIWrapper---")
-        wiki_tool = WikipediaQueryRun(api_wrapper=api_wrapper, name="Wikipedia search", description=description)
-        print("---Create WikipediaQueryRun---")
 
-        tools = [wiki_tool]
-        print("---Create tools---")
+        tool = create_tool("wikipedia")
+        tools = [tool]
+
         agent = create_react_agent(llm=self.llm, tools=tools, prompt=prompt, )
-        print("---Create agent---")
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=10, return_intermediate_steps=True, handle_parsing_errors=True)
-        print("---Create agent_executor---")
-        
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=cfg.AGENT_MAX_ITERATIONS, return_intermediate_steps=True, handle_parsing_errors=True)
+
         input_data = {
             "input": question,
             "agent_scratchpad": "",
             "chat_history": []
         }
 
-        # result = agent_executor.invoke({"input": question})
         result = agent_executor.invoke(input_data)
-        print("---Invoke agent_executor---")
-        print("RESULT:", result)
         answer = result["output"]
-        print("---Get answer from result---")
         print("ANSWER FROM ANGENT WIKI:", answer)
 
         return { "question": question, "generation": answer}
         
-
     ### Edges
 
-
-    def decide_to_generate(self, state: GraphState):
+    def _decide_to_generate(self, state: GraphState):
         """
         Determines whether to generate an answer, or re-generate a question.
 
@@ -215,7 +248,7 @@ class KnowledgeBaseSystem:
             return "generate"
 
 
-    def grade_generation_v_documents_and_question(self, state: GraphState):
+    def _grade_generation_v_documents_and_question(self, state: GraphState):
         """
         Determines whether the generation is grounded in the document and answers question.
 
@@ -257,18 +290,18 @@ class KnowledgeBaseSystem:
         workflow = StateGraph(self.GraphState)
 
         # Define the nodes
-        workflow.add_node("retrieve", self.retrieve)  # retrieve
-        workflow.add_node("grade_documents", self.grade_documents)  # grade documents
-        workflow.add_node("generate", self.generate)  # generatae
-        workflow.add_node("transform_query", self.transform_query)  # transform_query
-        workflow.add_node("wikipedia_search", self.wikipedia_search)  # wikipedia_search
+        workflow.add_node("retrieve", self._retrieve)  # retrieve
+        workflow.add_node("grade_documents", self._grade_documents)  # grade documents
+        workflow.add_node("generate", self._generate)  # generatae
+        workflow.add_node("transform_query", self._transform_query)  # transform_query
+        workflow.add_node("wikipedia_search", self._wikipedia_search)  # wikipedia_search
 
         # Build graph
         workflow.set_entry_point("retrieve")
         workflow.add_edge("retrieve", "grade_documents")
         workflow.add_conditional_edges(
             "grade_documents",
-            self.decide_to_generate,
+            self._decide_to_generate,
             {
                 # "transform_query": "transform_query",
                 "transform_query": "wikipedia_search",
@@ -279,7 +312,7 @@ class KnowledgeBaseSystem:
         workflow.add_edge("transform_query", "retrieve")
         workflow.add_conditional_edges(
             "generate",
-            self.grade_generation_v_documents_and_question,
+            self._grade_generation_v_documents_and_question,
             {
                 "not supported": "generate",
                 "useful": END,
