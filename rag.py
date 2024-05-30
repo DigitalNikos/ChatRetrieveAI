@@ -2,7 +2,7 @@ from config import Config as cfg
 from knowledge_base_system import KnowledgeBaseSystem
 
 class ChatPDF:
-    def __init__(self):
+    def __init__(self,):
         print("---init ChatPDF---")
         self.knowledge_base_system = KnowledgeBaseSystem(cfg.MODEL)
 

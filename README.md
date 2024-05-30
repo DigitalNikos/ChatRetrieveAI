@@ -14,6 +14,8 @@ ChatRetrieveAI is a chatbot application that uses the Retrieval-Augmented Genera
 
 ❌ Show metadata to answer(filename, page, url): TODO
 
+❌ Domain: TODO
+
 ✅ Contextual Chat: Engage in conversations with the chatbot, which uses the content of the uploaded PDFs and additional sources like Wikipedia.
 
 ✅Streamlit Interface: User-friendly interface built with Streamlit for easy interaction

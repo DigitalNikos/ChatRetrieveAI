@@ -1,6 +1,7 @@
 import os
 import tempfile
 import streamlit as st
+import time
 from streamlit_chat import message
 from rag import ChatPDF
 from langchain_core.documents import Document
@@ -22,7 +23,7 @@ def display_messages():
         elif isinstance(msg, Document):  
             display_msg = msg.page_content  
         else:
-            display_msg = str(msg)  
+            display_msg = str(msg)  # Convert to string or handle as needed
         
         message(display_msg, is_user=is_user, key=str(i))
     st.session_state["thinking_spinner"] = st.empty()
@@ -63,7 +64,7 @@ def page():
         st.session_state["assistant"] = ChatPDF()
 
     st.header("ChatPDF")
-
+        
     st.subheader("Upload a document")
     st.file_uploader(
         "Upload document",
@@ -74,10 +75,14 @@ def page():
         accept_multiple_files=True,
     )
 
-    st.session_state["ingestion_spinner"] = st.empty()
-
-    display_messages()
-    st.text_input("Message", key="user_input", on_change=process_input)
+    domain = st.text_input('Enter your Domain', key="domain")
+    print("Domain: ", domain)
+    if st.session_state["domain"].strip() == "":
+        st.warning("Please enter a domain before asking a question.")
+    else:
+        st.session_state["ingestion_spinner"] = st.empty()
+        display_messages()
+        st.text_input("Message", key="user_input", on_change=process_input)
 
 
 if __name__ == "__main__":
