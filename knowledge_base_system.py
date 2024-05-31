@@ -2,7 +2,7 @@ from langchain_community.chat_models import ChatOllama
 from langchain_core.output_parsers import JsonOutputParser
 from langchain import hub
 from langchain_core.output_parsers import StrOutputParser
-from prompts import grader_prompt, rag_prompt, hallucination_grader_prompt, answers_grader_prompt, re_write_prompt
+from prompts import grader_prompt, rag_prompt, hallucination_grader_prompt, answers_grader_prompt, re_write_prompt, domain_detection, domain_check, query_domain_check
 from typing_extensions import TypedDict
 from typing import List
 from langchain_community.tools import WikipediaQueryRun
@@ -19,6 +19,8 @@ from langchain_community.vectorstores.utils import filter_complex_metadata
 from config import Config as cfg
 from get_tools import create_tool
 from typing import List
+
+from clean_text import clean_text
 
 from langchain_core.documents import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -59,6 +61,10 @@ class KnowledgeBaseSystem:
         self.hallucination_grader_chain = self.hallucination_grader_prompt | self.json_llm | JsonOutputParser()
         self.answer_grader_chain = self.answers_grader_prompt | self.json_llm | JsonOutputParser()
         self.question_rewriter_chain = self.re_write_prompt | self.llm | StrOutputParser()
+        # ===============
+        self.summary_domain_chain = domain_detection | self.llm | JsonOutputParser()
+        self.domain_checking = domain_check | self.llm | JsonOutputParser()
+        self.query_check = query_domain_check | self.llm | JsonOutputParser()
         
         self.app = None
         self.initialize_graph()
@@ -74,7 +80,23 @@ class KnowledgeBaseSystem:
             },
         )
 
-    def ingest(self, pdf_file_path: str):
+    # def ingest(self, pdf_file_path: str):
+    #     print("---Ingest ChatPDF---")
+    #     docs = PyPDFLoader(file_path=pdf_file_path).load()
+
+    #     self.text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+    #         chunk_size=cfg.SPLITTER_CHUNK_SIZE, chunk_overlap=cfg.SPLITTER_CHUNK_OVERLAP
+    #     )
+
+    #     chunks = self.text_splitter.split_documents(docs)
+    #     chunks = filter_complex_metadata(chunks)
+
+    #     if not self.retriever:
+    #         self.initialize(chunks)
+    #     else:
+    #         self.retriever.add_documents(chunks)
+
+    def ingest(self, pdf_file_path: str, domain: str, file_name: str):
         print("---Ingest ChatPDF---")
         docs = PyPDFLoader(file_path=pdf_file_path).load()
 
@@ -85,10 +107,30 @@ class KnowledgeBaseSystem:
         chunks = self.text_splitter.split_documents(docs)
         chunks = filter_complex_metadata(chunks)
 
-        if not self.retriever:
-            self.initialize(chunks)
+        # print ("Chunks:", chunks)
+
+        for chunk in chunks:
+            chunk.page_content = clean_text(chunk.page_content)
+            chunk.metadata['source'] = file_name
+
+        # print ("Chunks after cleaning:", chunks)
+
+        result = self.summary_domain_chain.invoke({"documents": chunks})
+        print(result)
+        print(result["summary"])
+        print(result["domain"])
+
+        result = self.domain_checking.invoke({"domain": domain, "summary": result["summary"], "doc_domain": result["domain"]})  
+        print("Result for domain:", result)
+
+        if result["score"] == "no":
+            print("Document does not fall within the specified domain")
+            return result["score"]
         else:
-            self.retriever.add_documents(chunks)
+            if not self.retriever:
+                self.initialize(chunks)
+            else:
+                self.retriever.add_documents(chunks)
 
     # Post-processing
     def format_docs(docs):
@@ -327,6 +369,10 @@ class KnowledgeBaseSystem:
         return self.app.stream(inputs)
 
     def invoke(self, inputs):
+        answer = self.query_check.invoke(inputs)
+        if answer["score"] == "no":
+            print("Query does not fall within the specified domain")
+            return "Query does not fall within the specified domain"
         answer = self.app.invoke(inputs)
         final = answer['generation']
         print("FINAL ANSWER:", final)

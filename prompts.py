@@ -44,3 +44,39 @@ re_write_prompt = PromptTemplate(
      Here is the initial question: \n\n {question}. Improved question with no preamble: \n """,
     input_variables=["generation", "question"],
 )
+
+domain_detection = PromptTemplate(
+    template="""You are a grader assessing the summarization and domain of a set of documents.
+    Here are the documents:
+    \n ------- \n
+    {documents}
+    \n ------- \n
+    First, provide a summary of the documents. Then, indicate the domain the documents belong to (e.g., sports, movies, tech).
+    Provide the summary and domain as a JSON with keys 'summary' and 'domain' respectively, and no preamble or explanation.""",
+    input_variables=["documents"],
+)
+
+domain_check = PromptTemplate(
+    template="""You are a grader assessing whether a set of documents falls within a specified domain.
+    Here is the specified domain: {domain}
+    Here is the summary of the document:
+    \n ------- \n
+    {summary}
+    \n ------- \n
+    Here is the domain you have identified from the document: {doc_domain}
+    Give a binary 'yes' or 'no' score to indicate whether the documents fall within the specified domain. Not 0 or 1 only yes or no.
+    Provide the binary score as a JSON with a single key 'score' and no preamble or explanation.""",
+    input_variables=["domain", "summary", "doc_domain"],
+)
+
+query_domain_check = PromptTemplate(
+    template="""You are a grader assessing whether a query falls within a specified domain.
+    Here is the specified domain: {domain}
+    Here is the query:
+    \n ------- \n
+    {question}
+    \n ------- \n
+    Give a binary 'yes' or 'no' score to indicate whether the query fall within the specified domain. Not 0 or 1 only yes or no.
+    Provide the binary score as a JSON with a single key 'score' and no preamble or explanation.""",
+    input_variables=["domain", "question"],
+)
