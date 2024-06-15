@@ -1,5 +1,6 @@
-from langchain.prompts import PromptTemplate
 from langchain import hub
+from langchain.prompts import PromptTemplate
+
 
 grader_prompt = PromptTemplate(
     template="""You are a grader assessing relevance of a retrieved document to a user question. \n 
@@ -12,7 +13,20 @@ grader_prompt = PromptTemplate(
     input_variables=["question", "document"],
 )
 
-rag_prompt = hub.pull("rlm/rag-prompt")
+# rag_prompt = hub.pull("rlm/rag-prompt")
+rag_prompt =PromptTemplate(
+    template="""You are an assistant for question-answering tasks. 
+    Use the following pieces of retrieved context to answer the question. 
+    If you don't know the answer, just say that you don't know. 
+    Use three sentences maximum and keep the answer concise.
+    return a JSON with the key 'answer' and 'metadata', metadata should reference the metadata from used Document objects. 
+
+    Question: {question} 
+
+    Context: {context} 
+    """,
+    input_variables=["contexy", "question"],
+)
 
 hallucination_grader_prompt = PromptTemplate(
     template="""You are a grader assessing whether an answer is grounded in / supported by a set of facts. \n 
@@ -52,7 +66,7 @@ domain_detection = PromptTemplate(
     {documents}
     \n ------- \n
     First, provide a summary of the documents. Then, indicate the domain the documents belong to (e.g., sports, movies, tech).
-    Provide the summary and domain as a JSON with keys 'summary' and 'domain' respectively, and no preamble or explanation.""",
+    Provide the summary and domain as a JSON object with keys 'summary' and 'domain' respectively, and no preamble or explanation. Not a List but JSON object always""",
     input_variables=["documents"],
 )
 

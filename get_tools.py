@@ -5,6 +5,7 @@ from langchain_community.utilities import WikipediaAPIWrapper
 from config import Config as cfg
 
 def create_tool(tool_name, name: str = "", description: str = "", **kwargs):
+    print("Calling =>get_tools.py - create_tool()")
     if tool_name == "wikipedia":
         if name == "":
             name = "Wikipedia search"

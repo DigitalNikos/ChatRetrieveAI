@@ -1,24 +1,17 @@
-import os
-import tempfile
 import streamlit as st
-import time
-from streamlit_chat import message
-from rag import ChatPDF
+
 from langchain_core.documents import Document
+from streamlit_chat import message
+
+from extract_source import upload_pdf, upload_url
+from rag import ChatPDF
 
 
-
-
-st.set_page_config(page_title="ChatPDF")
-
+st.set_page_config(page_title="ChatPDF", page_icon="🤖")
 
 def display_messages():
-    # st.subheader("Chat")
-    # for i, (msg, is_user) in enumerate(st.session_state["messages"]):
-    #     message(msg, is_user=is_user, key=str(i))
-    # st.session_state["thinking_spinner"] = st.empty()
+    print("Calling =>chatbot.py - display_messages()")
 
-    st.subheader("Chat")
     for i, (msg, is_user) in enumerate(st.session_state["messages"]):
         # Ensure the message is JSON serializable
         if isinstance(msg, str):
@@ -28,11 +21,15 @@ def display_messages():
         else:
             display_msg = str(msg)  # Convert to string or handle as needed
         
-        message(display_msg, is_user=is_user, key=str(i))
+        print(f"Message {i} => {display_msg}")
+        print(f"Is User {i} => {is_user}")
+        print(f"Key {i} => {str(i)}")
+    
+        message(display_msg, is_user=is_user, key=str(i), avatar_style="bottts", seed=2)
     st.session_state["thinking_spinner"] = st.empty()
 
-
 def process_input():
+    print("Calling =>chatbot.py - process_input()")
     if st.session_state["user_input"] and len(st.session_state["user_input"].strip()) > 0:
         user_text = st.session_state["user_input"].strip()
         with st.session_state["thinking_spinner"], st.spinner(f"Thinking"):
@@ -42,26 +39,16 @@ def process_input():
         st.session_state["messages"].append((agent_text, False))
 
 
-def read_and_save_file(domain):
-    print("===read_and_save_file===")  
-    # st.session_state["assistant"].clear()
-    # st.session_state["messages"] = []
-    st.session_state["user_input"] = ""
+def read_and_save_file(domain: str, source_type: str):
+    print("Calling =>chatbot.py - read_and_save_file()")
 
-    for file in st.session_state["file_uploader"]:
-        _, file_extension = os.path.splitext(file.name)
-        file_extension = file_extension.lower()
-
-        with tempfile.NamedTemporaryFile(delete=False) as tf:
-            tf.write(file.getbuffer())
-            file_path = tf.name
-
-        with st.session_state["ingestion_spinner"], st.spinner(f"Ingesting {file.name}"):
-            # domain = st.session_state["domain"]
-            answer = st.session_state["assistant"].ingest(file_path, domain, file.name)
-            if answer == "no":
-                st.session_state["messages"].append(("Document does not fall within the specified domain", False))
-        os.remove(file_path)
+    if source_type == "document":
+        upload_pdf(domain, st)
+    elif source_type == "url":
+        print("It is URL")
+        upload_url(domain, st)
+    else:
+        raise ValueError(f"Invalid source type {source_type}")
 
 def initialize_session_state():
     if len(st.session_state) == 0:
@@ -71,20 +58,27 @@ def clear_session_state():
     st.session_state["messages"] = []
     st.session_state["assistant"] = ChatPDF()
     st.session_state["domain"] = ""
+    st.session_state["ingested_documents"] = set()
+    st.session_state["ingested_urls"] = set()
 
 
 def page():
-    print("===page()===")
+    print("Calling =>chatbot.py - page()")
     initialize_session_state()
 
     # Update the header with the domain if set
     if st.session_state["domain"].strip() == "":
-        st.header("🤖 Chatbot")
+        st.header("Chatbot 🤖 💬")
+        st.caption("🚀 ChatRetrieveAI: Using RAG for Document and Wikipedia Interaction.")
     else:
         
         col1, col2 = st.columns([4, 1])
         with col1:
-            st.header(f"🤖 Chatbot {st.session_state['domain']} domain")
+            st.header(f"Chatbot {st.session_state['domain']} domain 🤖 💬")
+            st.caption("🚀 ChatRetrieveAI: Using RAG for Document and Wikipedia Interaction.")
+            if not st.session_state["messages"]:
+                domain_message = f"Welcome to our  {st.session_state['domain']} domain support chat! How can I assist you today?"
+                st.session_state["messages"] = [(domain_message, False)]
         with col2:
             if st.button("Reset Domain", type="primary"):
                 clear_session_state()
@@ -107,23 +101,34 @@ def page():
         if st.session_state["domain"].strip() != "":
             st.rerun() 
     else:        
-        domain = st.session_state["domain"]
-
-        st.file_uploader(
-            "Upload document",
-            type=["pdf"],
-            key="file_uploader",
-            on_change=read_and_save_file,
-            args = (st.session_state["domain"], ),
-            label_visibility="collapsed",
-            accept_multiple_files=True,
-        )
+        
+        with st.sidebar:
+            file_upload = st.file_uploader(
+                "Upload document",
+                type=["pdf", "docx", "txt"],
+                key="file_uploader",
+                on_change=read_and_save_file,
+                args = (st.session_state["domain"], "document" ),
+                label_visibility="collapsed",
+                accept_multiple_files=True,
+            )
+            try:
+                st.text_input(
+                    "Give Url", 
+                    help = "Enter the URL of the webpage you want to ingest. The URL should be publicly accessible and not require any authentication. The URL should start with 'http' or 'https'.",
+                    key="url_upload",
+                    on_change=read_and_save_file,
+                    args = (st.session_state["domain"], "url" ),)
+            except:
+                #TODO need to handle this error???
+                # st.error("Invalid URL")
+                st.write("Invalidd URL")
 
         st.session_state["ingestion_spinner"] = st.empty()
         display_messages()
-        st.text_input("Message", key="user_input", on_change=process_input)
+        st.chat_input("Messageeeee", key="user_input", on_submit=process_input)
 
 
 if __name__ == "__main__":
-    print("===__main__===")
+    print("Calling =>chatbot.py - __main__")
     page()

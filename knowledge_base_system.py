@@ -1,32 +1,31 @@
-from langchain_community.chat_models import ChatOllama
-from langchain_core.output_parsers import JsonOutputParser
 from langchain import hub
-from langchain_core.output_parsers import StrOutputParser
-from prompts import grader_prompt, rag_prompt, hallucination_grader_prompt, answers_grader_prompt, re_write_prompt, domain_detection, domain_check, query_domain_check
-from typing_extensions import TypedDict
-from typing import List
+from langchain_community.chat_models import ChatOllama
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
-from langchain.agents import create_react_agent
-from langchain.agents import AgentExecutor
-from langchain import hub
-from langgraph.graph import END, StateGraph
-
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import FastEmbedEmbeddings
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader, WebBaseLoader
 from langchain_community.vectorstores.utils import filter_complex_metadata
+from langchain.agents import create_react_agent, AgentExecutor
+from langgraph.graph import END, StateGraph
+from langchain_core.documents import Document
+from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.output_parsers import ResponseSchema, StructuredOutputParser
+from langchain.prompts import PromptTemplate
+import os
+
+from prompts import grader_prompt, rag_prompt, hallucination_grader_prompt, answers_grader_prompt, re_write_prompt, domain_check, query_domain_check, domain_detection
+from clean_text import clean_text
 from config import Config as cfg
 from get_tools import create_tool
+
 from typing import List
+from typing_extensions import TypedDict
 
-from clean_text import clean_text
-
-from langchain_core.documents import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 class KnowledgeBaseSystem:
-
+    print('Calling => knowledge_base_system.py - KnowledgeBaseSystem()')
     class GraphState(TypedDict):
         """
         Represents the state of our graph.
@@ -36,13 +35,18 @@ class KnowledgeBaseSystem:
             generation: LLM generation
             documents: list of documents
         """
-
+        print('Calling => knowledge_base_system.py - GraphState()')
         question: str
         generation: str
         documents: List[str]
 
-    def __init__(self, llm_name: str):        
+    def __init__(self, llm_name: str):  
+        print('Calling => knowledge_base_system.py - __init__()')      
         self.retriever = None
+
+        # Set to keep track of ingested documents and URLs
+        self.ingested_documents = set()  
+        self.ingested_urls = set()  
 
         # LLMs
         self.json_llm = ChatOllama(model=llm_name, format="json", temperature=0)
@@ -57,11 +61,12 @@ class KnowledgeBaseSystem:
 
         # Chains
         self.retrieval_grader_chain = self.grader_prompt | self.json_llm | JsonOutputParser()
-        self.rag_chain = self.rag_prompt | self.llm | StrOutputParser()
+        self.rag_chain = self.rag_prompt | self.llm | JsonOutputParser()
         self.hallucination_grader_chain = self.hallucination_grader_prompt | self.json_llm | JsonOutputParser()
         self.answer_grader_chain = self.answers_grader_prompt | self.json_llm | JsonOutputParser()
         self.question_rewriter_chain = self.re_write_prompt | self.llm | StrOutputParser()
         # ===============
+
         self.summary_domain_chain = domain_detection | self.llm | JsonOutputParser()
         self.domain_checking = domain_check | self.llm | JsonOutputParser()
         self.query_check = query_domain_check | self.llm | JsonOutputParser()
@@ -70,7 +75,7 @@ class KnowledgeBaseSystem:
         self.initialize_graph()
 
     def initialize(self, chunks: List[Document]):
-        print("---Initialize ChatPDF---")
+        print('Calling => knowledge_base_system.py - initialize()')
         vector_store = Chroma.from_documents(documents=chunks, collection_name="rag-chroma", embedding=FastEmbedEmbeddings())
         self.retriever = vector_store.as_retriever(
             search_type="similarity_score_threshold",
@@ -80,25 +85,19 @@ class KnowledgeBaseSystem:
             },
         )
 
-    # def ingest(self, pdf_file_path: str):
-    #     print("---Ingest ChatPDF---")
-    #     docs = PyPDFLoader(file_path=pdf_file_path).load()
+    def ingest(self,sources: dict):
+        print('Calling => knowledge_base_system.py - ingest()')
 
-    #     self.text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-    #         chunk_size=cfg.SPLITTER_CHUNK_SIZE, chunk_overlap=cfg.SPLITTER_CHUNK_OVERLAP
-    #     )
+        source_extension = sources['source_extension']
 
-    #     chunks = self.text_splitter.split_documents(docs)
-    #     chunks = filter_complex_metadata(chunks)
+        if source_extension not in cfg.LOADERS_TYPES:
+            raise Exception("Not valid upload source!!")
 
-    #     if not self.retriever:
-    #         self.initialize(chunks)
-    #     else:
-    #         self.retriever.add_documents(chunks)
-
-    def ingest(self, pdf_file_path: str, domain: str, file_name: str):
-        print("---Ingest ChatPDF---")
-        docs = PyPDFLoader(file_path=pdf_file_path).load()
+        # Load document
+        if source_extension == "url":
+            docs = cfg.LOADERS_TYPES[source_extension](sources["url"]).load()
+        else:
+            docs = cfg.LOADERS_TYPES[source_extension](sources["file_path"]).load()
 
         self.text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
             chunk_size=cfg.SPLITTER_CHUNK_SIZE, chunk_overlap=cfg.SPLITTER_CHUNK_OVERLAP
@@ -106,34 +105,23 @@ class KnowledgeBaseSystem:
 
         chunks = self.text_splitter.split_documents(docs)
         chunks = filter_complex_metadata(chunks)
-
-        # print ("Chunks:", chunks)
-
-        for chunk in chunks:
-            chunk.page_content = clean_text(chunk.page_content)
-            chunk.metadata['source'] = file_name
-
-        # print ("Chunks after cleaning:", chunks)
+        chunks = clean_text(chunks, sources['file_name'])
 
         result = self.summary_domain_chain.invoke({"documents": chunks})
-        print(result)
-        print(result["summary"])
-        print(result["domain"])
 
-        result = self.domain_checking.invoke({"domain": domain, "summary": result["summary"], "doc_domain": result["domain"]})  
-        print("Result for domain:", result)
+        result = self.domain_checking.invoke({"domain": sources['domain'], "summary": result["summary"], "doc_domain": result["domain"]})  
 
         if result["score"] == "no":
-            print("Document does not fall within the specified domain")
             return result["score"]
+        
+        if not self.retriever:
+            self.initialize(chunks)
         else:
-            if not self.retriever:
-                self.initialize(chunks)
-            else:
-                self.retriever.add_documents(chunks)
+            self.retriever.add_documents(chunks)
+    
 
-    # Post-processing
     def format_docs(docs):
+        print('Calling => knowledge_base_system.py - format_docs()')
         return "\n\n".join(doc.page_content for doc in docs)
 
 
@@ -150,7 +138,7 @@ class KnowledgeBaseSystem:
         if self.retriever is None: # or raise error
             return {"documents": [], "question": state["question"]}
         
-        print("---RETRIEVE---")
+        print("Calling => knowledge_base_system.py - _retrieve()")
         question = state["question"]
 
         # Retrieval
@@ -168,12 +156,16 @@ class KnowledgeBaseSystem:
         Returns:
             state (dict): New key added to state, generation, that contains LLM generation
         """
-        print("---GENERATE---")
+        print("Calling => knowledge_base_system.py - _generate()")
         question = state["question"]
         documents = state["documents"]
 
         # RAG generation
+        print(" genarate documents:", documents)
         generation = self.rag_chain.invoke({"context": documents, "question": question})
+        print("answer from RAG:", generation['answer'])
+        print("answer from RAG:", generation['metadata'])
+
         return {"documents": documents, "question": question, "generation": generation}
 
 
@@ -188,7 +180,7 @@ class KnowledgeBaseSystem:
             state (dict): Updates documents key with only filtered relevant documents
         """
 
-        print("---CHECK DOCUMENT RELEVANCE TO QUESTION---")
+        print("Calling => knowledge_base_system.py - _grade_documents()")
         question = state["question"]
         documents = state["documents"]
 
@@ -219,7 +211,7 @@ class KnowledgeBaseSystem:
             state (dict): Updates question key with a re-phrased question
         """
 
-        print("---TRANSFORM QUERY---")
+        print("Calling => knowledge_base_system.py - _transform_query()")
         question = state["question"]
         documents = state["documents"]
 
@@ -238,7 +230,8 @@ class KnowledgeBaseSystem:
             state (dict): Updates the state with the original question and the generated answer from Wikipedia
         """
 
-        print("---WIKIPEDIA SEARCH---")
+        print("Calling => knowledge_base_system.py - _wikipedia_search()")
+
         prompt = hub.pull("hwchase17/react-chat")
         question = state["question"]
 
@@ -273,7 +266,7 @@ class KnowledgeBaseSystem:
             str: Binary decision for next node to call
         """
 
-        print("---ASSESS GRADED DOCUMENTS---")
+        print("Calling => knowledge_base_system.py - _decide_to_generate()")
         question = state["question"]
         filtered_documents = state["documents"]
 
@@ -301,7 +294,7 @@ class KnowledgeBaseSystem:
             str: Decision for next node to call
         """
 
-        print("---CHECK HALLUCINATIONS---")
+        print("Calling => knowledge_base_system.py - _grade_generation_v_documents_and_question()")
         question = state["question"]
         documents = state["documents"]
         generation = state["generation"]
@@ -328,7 +321,8 @@ class KnowledgeBaseSystem:
             print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RE-TRY---")
             return "not supported"
         
-    def initialize_graph(self):        
+    def initialize_graph(self):    
+        print('Calling => knowledge_base_system.py - initialize_graph()')    
         workflow = StateGraph(self.GraphState)
 
         # Define the nodes
@@ -366,9 +360,11 @@ class KnowledgeBaseSystem:
         self.app = workflow.compile()
     
     def stream(self, inputs):
+        print('Calling => knowledge_base_system.py - stream()')
         return self.app.stream(inputs)
 
     def invoke(self, inputs):
+        print('Calling => knowledge_base_system.py - invoke()')
         answer = self.query_check.invoke(inputs)
         if answer["score"] == "no":
             print("Query does not fall within the specified domain")
