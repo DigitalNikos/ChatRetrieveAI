@@ -97,6 +97,7 @@ class KnowledgeBaseSystem:
         if source_extension == "url":
             docs = cfg.LOADERS_TYPES[source_extension](sources["url"]).load()
         else:
+            print("Upload file again!")
             docs = cfg.LOADERS_TYPES[source_extension](sources["file_path"]).load()
 
         self.text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(

@@ -103,6 +103,7 @@ def page():
     else:        
         
         with st.sidebar:
+            
             file_upload = st.file_uploader(
                 "Upload document",
                 type=["pdf", "docx", "txt"],
@@ -112,6 +113,8 @@ def page():
                 label_visibility="collapsed",
                 accept_multiple_files=True,
             )
+            print("File Uploader", st.session_state["file_uploader"])
+            
             try:
                 st.text_input(
                     "Give Url", 
