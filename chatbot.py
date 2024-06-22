@@ -1,4 +1,5 @@
 import streamlit as st
+from config import Config as cfg
 
 from langchain_core.documents import Document
 from streamlit_chat import message
@@ -20,16 +21,13 @@ def display_messages():
             display_msg = msg.page_content  
         else:
             display_msg = str(msg)  # Convert to string or handle as needed
-        
-        print(f"Message {i} => {display_msg}")
-        print(f"Is User {i} => {is_user}")
-        print(f"Key {i} => {str(i)}")
     
         message(display_msg, is_user=is_user, key=str(i), avatar_style="bottts", seed=2)
     st.session_state["thinking_spinner"] = st.empty()
 
 def process_input():
     print("Calling =>chatbot.py - process_input()")
+    
     if st.session_state["user_input"] and len(st.session_state["user_input"].strip()) > 0:
         user_text = st.session_state["user_input"].strip()
         with st.session_state["thinking_spinner"], st.spinner(f"Thinking"):
@@ -42,13 +40,11 @@ def process_input():
 def read_and_save_file(domain: str, source_type: str):
     print("Calling =>chatbot.py - read_and_save_file()")
 
-    if source_type == "document":
-        upload_pdf(domain, st)
-    elif source_type == "url":
-        print("It is URL")
-        upload_url(domain, st)
+    action = cfg.UPLOAD_ACTIONS.get(source_type)
+    if action:
+        action(domain, st)
     else:
-        raise ValueError(f"Invalid source type {source_type}")
+        raise ValueError(f"Invalid source type: {source_type}. Expected '.pdf', '.docx', '.txt' or 'url'.")
 
 def initialize_session_state():
     if len(st.session_state) == 0:
@@ -70,8 +66,7 @@ def page():
     if st.session_state["domain"].strip() == "":
         st.header("Chatbot 🤖 💬")
         st.caption("🚀 ChatRetrieveAI: Using RAG for Document and Wikipedia Interaction.")
-    else:
-        
+    else: 
         col1, col2 = st.columns([4, 1])
         with col1:
             st.header(f"Chatbot {st.session_state['domain']} domain 🤖 💬")
@@ -100,10 +95,8 @@ def page():
         
         if st.session_state["domain"].strip() != "":
             st.rerun() 
-    else:        
-        
-        with st.sidebar:
-            
+    else:                
+        with st.sidebar:          
             file_upload = st.file_uploader(
                 "Upload document",
                 type=["pdf", "docx", "txt"],

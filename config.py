@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader, WebBaseLoader
+from extract_source import upload_pdf, upload_url
 
 @dataclass
 class Config:
@@ -20,3 +21,8 @@ class Config:
         ".docx": Docx2txtLoader,
         "url": WebBaseLoader,
     }    
+
+    UPLOAD_ACTIONS = {
+        "document": upload_pdf,
+        "url": upload_url
+    }

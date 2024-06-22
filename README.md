@@ -8,7 +8,7 @@ ChatRetrieveAI is a chatbot application that uses the Retrieval-Augmented Genera
 
 ✅ Document Ingestion: Upload and ingest documents or URLs to create a searchable knowledge base.
 
-❌ Documents(.txt .docs urls) Ingestion: TODO
+✅ Documents(.txt .docs urls) Ingestion: TODO
 
 ❌ Chat History: TODO
 

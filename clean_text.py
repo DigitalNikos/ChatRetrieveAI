@@ -1,19 +1,6 @@
 import re
 # from bs4 import BeautifulSoup
 
-# def clean_text(text):
-#     print("Calling =>clean_text.py - clean_text()")
-#     # Remove HTML tags
-#     # text = BeautifulSoup(text, "lxml").get_text()
-    
-#     text = re.sub(r'[^A-Za-z\s]', '', text)
-    
-#     text = re.sub(r'\s+', ' ', text).strip()
-    
-#     text = text.lower()
-    
-#     return text
-
 def clean_text(chunks, file_name:str):
     print("Calling =>clean_text.py - clean_text()")
     # Remove HTML tags

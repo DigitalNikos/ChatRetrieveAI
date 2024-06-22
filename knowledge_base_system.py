@@ -44,10 +44,6 @@ class KnowledgeBaseSystem:
         print('Calling => knowledge_base_system.py - __init__()')      
         self.retriever = None
 
-        # Set to keep track of ingested documents and URLs
-        self.ingested_documents = set()  
-        self.ingested_urls = set()  
-
         # LLMs
         self.json_llm = ChatOllama(model=llm_name, format="json", temperature=0)
         self.llm = ChatOllama(model=llm_name, temperature=0)
@@ -71,6 +67,7 @@ class KnowledgeBaseSystem:
         self.domain_checking = domain_check | self.llm | JsonOutputParser()
         self.query_check = query_domain_check | self.llm | JsonOutputParser()
         
+
         self.app = None
         self.initialize_graph()
 
@@ -108,6 +105,8 @@ class KnowledgeBaseSystem:
         chunks = filter_complex_metadata(chunks)
         chunks = clean_text(chunks, sources['file_name'])
 
+        print("Chunks URL: ", chunks)
+
         result = self.summary_domain_chain.invoke({"documents": chunks})
 
         result = self.domain_checking.invoke({"domain": sources['domain'], "summary": result["summary"], "doc_domain": result["domain"]})  
@@ -120,6 +119,7 @@ class KnowledgeBaseSystem:
         else:
             self.retriever.add_documents(chunks)
     
+        # print("DB DATA: ", self.vector_store.get())
 
     def format_docs(docs):
         print('Calling => knowledge_base_system.py - format_docs()')
@@ -372,5 +372,10 @@ class KnowledgeBaseSystem:
             return "Query does not fall within the specified domain"
         answer = self.app.invoke(inputs)
         final = answer['generation']
-        print("FINAL ANSWER:", final)
-        return final
+        # final_answer = final['answer'] + "\n" + final['metadata']["source"]
+        # print("FINAL ANSWER:", final)
+        formatted_output = f"{final['answer']}\nsource: {''.join(final['metadata']['source'])}\npage: {final['metadata']['page']}"
+        print("FINAL ANSWER answer:", final['answer'])
+        print("FINAL ANSWER metadata:", final['metadata'])
+        
+        return formatted_output

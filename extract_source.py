@@ -4,7 +4,7 @@ import requests
 
 def upload_pdf(domain: str, st):
     print("Calling =>extract_source.py - upload_pdf()")
-    # for file in st.session_state["file_uploader"][-1]:
+    # for file in st.session_state["file_uploader"]:
     if st.session_state["file_uploader"]:
         file = st.session_state["file_uploader"][-1]
         print(f"File to upload again Name: {file.name}")
