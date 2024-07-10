@@ -7,15 +7,22 @@ from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader, WebBaseLoader
 from langchain_community.vectorstores.utils import filter_complex_metadata
 from langchain.agents import create_react_agent, AgentExecutor
-from langgraph.graph import END, StateGraph
+from langgraph.graph import END, StateGraph, START
 from langchain_core.documents import Document
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.output_parsers import ResponseSchema, StructuredOutputParser
-from langchain.prompts import PromptTemplate
+from langchain.tools import DuckDuckGoSearchRun
+from langchain_community.tools import DuckDuckGoSearchResults
+
+from langchain_core.messages import HumanMessage, AIMessage
+
+from langchain.chains import create_history_aware_retriever
+
+import re
 import os
 
-from prompts import grader_prompt, rag_prompt, hallucination_grader_prompt, answers_grader_prompt, re_write_prompt, domain_check, query_domain_check, domain_detection
+from prompts import rephrase_prompt, grader_prompt, rag_prompt, hallucination_grader_prompt, answers_grader_prompt, re_write_prompt, domain_check, query_domain_check, domain_detection
 from clean_text import clean_text
 from config import Config as cfg
 from get_tools import create_tool
@@ -39,11 +46,12 @@ class KnowledgeBaseSystem:
         question: str
         generation: str
         documents: List[str]
+        domain: str
 
     def __init__(self, llm_name: str):  
         print('Calling => knowledge_base_system.py - __init__()')      
         self.retriever = None
-
+        
         # LLMs
         self.json_llm = ChatOllama(model=llm_name, format="json", temperature=0)
         self.llm = ChatOllama(model=llm_name, temperature=0)
@@ -54,18 +62,26 @@ class KnowledgeBaseSystem:
         self.rag_prompt = rag_prompt
         self.answers_grader_prompt = answers_grader_prompt
         self.re_write_prompt = re_write_prompt
+        self.rephrase_prompt = rephrase_prompt
 
         # Chains
         self.retrieval_grader_chain = self.grader_prompt | self.json_llm | JsonOutputParser()
         self.rag_chain = self.rag_prompt | self.llm | JsonOutputParser()
         self.hallucination_grader_chain = self.hallucination_grader_prompt | self.json_llm | JsonOutputParser()
         self.answer_grader_chain = self.answers_grader_prompt | self.json_llm | JsonOutputParser()
-        self.question_rewriter_chain = self.re_write_prompt | self.llm | StrOutputParser()
+        # self.question_rewriter_chain = self.re_write_prompt | self.json_llm | JsonOutputParser()
+        self.question_rewriter_chain = rephrase_prompt | self.json_llm | JsonOutputParser()
         # ===============
 
         self.summary_domain_chain = domain_detection | self.llm | JsonOutputParser()
         self.domain_checking = domain_check | self.llm | JsonOutputParser()
-        self.query_check = query_domain_check | self.llm | JsonOutputParser()
+        self.query_check = query_domain_check | self.json_llm | JsonOutputParser()
+        
+        # self.chat_retriever_chain = create_history_aware_retriever(self.llm, self.retriever, rephrase_prompt)
+        
+        self.chat_history = []
+        
+        self.search_duckduckGo_search_results = DuckDuckGoSearchResults(num_results = 2, verbose = True)
         
 
         self.app = None
@@ -111,8 +127,8 @@ class KnowledgeBaseSystem:
 
         result = self.domain_checking.invoke({"domain": sources['domain'], "summary": result["summary"], "doc_domain": result["domain"]})  
 
-        if result["score"] == "no":
-            return result["score"]
+        # if result["score"] == "no":
+        #     return result["score"]
         
         if not self.retriever:
             self.initialize(chunks)
@@ -124,8 +140,64 @@ class KnowledgeBaseSystem:
     def format_docs(docs):
         print('Calling => knowledge_base_system.py - format_docs()')
         return "\n\n".join(doc.page_content for doc in docs)
+    
+    
+    
+    
+    
+    
+    # ===============START NEW GRAPH================
+    
+    def _check_query_domain(self, state: GraphState):
+        """
+        Determine if the provided query falls within the specified domain.
 
+        This method evaluates whether a given question belongs to a particular
+        domain by invoking an external query check method.
 
+        Args:
+            state (GraphState): The current state of the graph containing the
+                                'question' and 'domain' keys.
+
+        Returns:
+            str: "yes" if the query is within the specified domain, otherwise "no".
+        """
+        print('Calling => knowledge_base_system.py - _check_query_domain()')
+        
+        question = state["question"]
+        domain = state["domain"]
+        print("\nQuestion: ", question)
+        print("\nDomain: ", state["domain"])
+        print("\nState: ", state)
+        answer = self.query_check.invoke({"question": question, "domain": domain})
+        print("\nAnswer: ", answer)
+        state['generation'] = answer['score']
+        return state
+    
+    def domain_relevance_condition(self, state: GraphState):
+        print('Calling => knowledge_base_system.py - domain_relevance_condition()')
+        if state["generation"] == "yes":
+            return "retrieve"
+        else:
+            return "rephrase"
+        
+    def existing_docs_condition(self, state: GraphState):
+        print('Calling => knowledge_base_system.py - existing_docs_condition()')
+        print("State: ", state)
+        if state["documents"]:
+            print("Documents exist")
+            return "generate"
+        else:
+            print("Documents do not exist")
+            return "duckDuckGo_search"
+
+    def hallucination_condition(self, state: GraphState):
+        print('Calling => knowledge_base_system.py - hallucination_condition()')
+        if state["score"] != "useful":
+            state['generation'] = ""            
+        return state['score']
+        
+    
     def _retrieve(self, state: GraphState):
         """
         Retrieve documents
@@ -136,15 +208,25 @@ class KnowledgeBaseSystem:
         Returns:
             state (dict): New key added to state, documents, that contains retrieved documents
         """
-        if self.retriever is None: # or raise error
-            return {"documents": [], "question": state["question"]}
-        
         print("Calling => knowledge_base_system.py - _retrieve()")
+        if self.retriever is None: # or raise error
+            state["documents"] = []
+            return state
+        
         question = state["question"]
 
-        # Retrieval
-        documents = self.retriever.get_relevant_documents(question)
+        chat_retriever_chain = create_history_aware_retriever(self.llm, self.retriever, rephrase_prompt)
+        documents = chat_retriever_chain.invoke({"input": question, "chat_history": self.chat_history})
         return {"documents": documents, "question": question}
+    
+    
+    
+    
+    
+    # ===============END NEW GRAPH================
+
+
+
 
 
     def _generate(self, state: GraphState):
@@ -167,7 +249,7 @@ class KnowledgeBaseSystem:
         print("answer from RAG:", generation['answer'])
         print("answer from RAG:", generation['metadata'])
 
-        return {"documents": documents, "question": question, "generation": generation}
+        return {"documents": documents, "question": question, "generation": generation['answer']}
 
 
     def _grade_documents(self, state: GraphState):
@@ -215,44 +297,27 @@ class KnowledgeBaseSystem:
         print("Calling => knowledge_base_system.py - _transform_query()")
         question = state["question"]
         documents = state["documents"]
-
+        print(f"Chat history: {self.chat_history}")
         # Re-write question
-        better_question = self.question_rewriter_chain.invoke({"question": question})
-        return {"documents": documents, "question": better_question}
+        better_question = self.question_rewriter_chain.invoke({"input": question, "chat_history": self.chat_history})
+        print("Better question: ", better_question)
+        return {"documents": documents, "question": better_question['question']}
 
-    def _wikipedia_search(self, state: GraphState):
-        """
-        Perform a search using Wikipedia to retrieve information.
-
-        Args:
-            state (dict): The current graph state
-
-        Returns:
-            state (dict): Updates the state with the original question and the generated answer from Wikipedia
-        """
-
-        print("Calling => knowledge_base_system.py - _wikipedia_search()")
-
-        prompt = hub.pull("hwchase17/react-chat")
+    def _duckDuckGo_search(self, state: GraphState):
+        print("Calling => knowledge_base_system.py -duckGO()")
+        
         question = state["question"]
+        print("\nQuestion: ", question)
+        
+        documents = self.search_duckduckGo_search_results.invoke({"query": state["question"]})
+        print("\nDocuments as string: ", documents)
+        documents = self.convert_str_to_document(documents)
+        print("\nDocuments: ", documents)
+        # answer = self.rag_chain.invoke({"context": documents, "question": question})
+        # print("Answer: ", answer)
 
-        tool = create_tool("wikipedia")
-        tools = [tool]
-
-        agent = create_react_agent(llm=self.llm, tools=tools, prompt=prompt, )
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=cfg.AGENT_MAX_ITERATIONS, return_intermediate_steps=True, handle_parsing_errors=True)
-
-        input_data = {
-            "input": question,
-            "agent_scratchpad": "",
-            "chat_history": []
-        }
-
-        result = agent_executor.invoke(input_data)
-        answer = result["output"]
-        print("ANSWER FROM ANGENT WIKI:", answer)
-
-        return { "question": question, "generation": answer}
+        # return { "question": question, "generation": answer}
+        return {"documents": documents, "question": question}
         
     ### Edges
 
@@ -314,68 +379,171 @@ class KnowledgeBaseSystem:
             grade = score["score"]
             if grade == "yes":
                 print("---DECISION: GENERATION ADDRESSES QUESTION---")
-                return "useful"
+                state["score"] = "useful"
+                return state
             else:
                 print("---DECISION: GENERATION DOES NOT ADDRESS QUESTION---")
-                return "not useful"
+                state["score"] = "not useful"
+                return state
         else:
             print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RE-TRY---")
-            return "not supported"
+            state["score"] = "not supported"
+            return state
         
     def initialize_graph(self):    
         print('Calling => knowledge_base_system.py - initialize_graph()')    
         workflow = StateGraph(self.GraphState)
 
-        # Define the nodes
-        workflow.add_node("retrieve", self._retrieve)  # retrieve
-        workflow.add_node("grade_documents", self._grade_documents)  # grade documents
-        workflow.add_node("generate", self._generate)  # generatae
-        workflow.add_node("transform_query", self._transform_query)  # transform_query
-        workflow.add_node("wikipedia_search", self._wikipedia_search)  # wikipedia_search
-
-        # Build graph
-        workflow.set_entry_point("retrieve")
-        workflow.add_edge("retrieve", "grade_documents")
+        workflow.add_edge(START, "check_query_domain")
+        workflow.add_node("check_query_domain", self._check_query_domain)
+        
+        workflow.add_node("retrieve", self._retrieve)
+        workflow.add_node("rephrase", self._transform_query)
+        
+        workflow.add_node("generate", self._generate)
+        workflow.add_node("duckDuckGo_search", self._duckDuckGo_search)
+        workflow.add_node("hallucination_grader", self._grade_generation_v_documents_and_question)
+        
+        
         workflow.add_conditional_edges(
-            "grade_documents",
-            self._decide_to_generate,
+            "check_query_domain",
+            self.domain_relevance_condition,
             {
-                # "transform_query": "transform_query",
-                "transform_query": "wikipedia_search",
+                "retrieve": "retrieve",
+                "rephrase": "rephrase",
+            },
+        )
+        
+        workflow.add_edge("rephrase", "check_query_domain")
+        
+        workflow.add_conditional_edges(
+            "retrieve",
+            self.existing_docs_condition,
+            {
                 "generate": "generate",
+                "duckDuckGo_search": "duckDuckGo_search",
             },
         )
-        workflow.add_edge("wikipedia_search", END)
-        workflow.add_edge("transform_query", "retrieve")
+        
+        workflow.add_edge("generate", "hallucination_grader")
+        workflow.add_edge("duckDuckGo_search", "generate")
+        
         workflow.add_conditional_edges(
-            "generate",
-            self._grade_generation_v_documents_and_question,
+            "hallucination_grader",
+            self.hallucination_condition,
             {
-                "not supported": "generate",
+                "not supported": END,
                 "useful": END,
-                "not useful": "transform_query",
+                "not useful": END,
             },
         )
+        
+
+        
+
+        # # Define the nodes
+        # workflow.add_node("check_query_domain", self._check_query_domain)
+        # workflow.add_node("retrieve", self._retrieve)
+        # # workflow.add_node("retrieve", self._retrieve)  # retrieve
+        # # workflow.add_node("grade_documents", self._grade_documents)  # grade documents
+        # # workflow.add_node("generate", self._generate)  # generatae
+        # # workflow.add_node("transform_query", self._transform_query)  # transform_query
+        # # workflow.add_node("duckDuckGo_search", self._duckDuckGo_search)  # wikipedia_search
+
+        # # # Build graph
+        # workflow.set_entry_point("check_query_domain")
+        # workflow.add_conditional_edges(
+        #     ""
+        #     self._check_query_domain,
+        #     {
+        #         "yes": "retrieve",
+        #         "no": END,
+        #     },
+        # )
+        # workflow.set_entry_point("retrieve")
+        # workflow.add_edge("retrieve", "grade_documents")
+        # workflow.add_conditional_edges(
+        #     "grade_documents",
+        #     self._decide_to_generate,
+        #     {
+        #         # "transform_query": "transform_query",
+        #         "transform_query": "duckDuckGo_search",
+        #         "generate": "generate",
+        #     },
+        # )
+        # workflow.add_edge("duckDuckGo_search", END)
+        # workflow.add_edge("transform_query", "retrieve")
+        # workflow.add_conditional_edges(
+        #     "generate",
+        #     self._grade_generation_v_documents_and_question,
+        #     {
+        #         "not supported": "generate",
+        #         "useful": END,
+        #         "not useful": "transform_query",
+        #     },
+        # )
 
         # Compile
         self.app = workflow.compile()
     
     def stream(self, inputs):
         print('Calling => knowledge_base_system.py - stream()')
-        return self.app.stream(inputs)
+        return self.app.stream(inputs, {"recursion_limit": 10})
 
     def invoke(self, inputs):
         print('Calling => knowledge_base_system.py - invoke()')
-        answer = self.query_check.invoke(inputs)
-        if answer["score"] == "no":
-            print("Query does not fall within the specified domain")
-            return "Query does not fall within the specified domain"
-        answer = self.app.invoke(inputs)
-        final = answer['generation']
-        # final_answer = final['answer'] + "\n" + final['metadata']["source"]
-        # print("FINAL ANSWER:", final)
-        formatted_output = f"{final['answer']}\nsource: {''.join(final['metadata']['source'])}\npage: {final['metadata']['page']}"
-        print("FINAL ANSWER answer:", final['answer'])
-        print("FINAL ANSWER metadata:", final['metadata'])
-        
-        return formatted_output
+        print("Inputs: ", inputs)
+        print("Inputs type: ", type(inputs))
+        # answer = self.query_check.invoke(inputs)
+        # if answer["score"] == "no":
+        #     print("Query does not fall within the specified domain")
+        #     return "Query does not fall within the specified domain"
+        # else:
+        #     return "MALAKIA"
+        # inputs["chat_history"] = self.chat_history
+        try:
+            answer = self.app.invoke(inputs, {"recursion_limit": 10})
+        except Exception as e:
+            print("Error: ", e)
+            answer = {"generation": "I don't know the answer to that question"}
+        self.update_chat_history(inputs['question'], answer['generation'])
+        return answer['generation']
+    
+    def convert_str_to_document(self, input:str):
+        print('Calling => knowledge_base_system.py - convert_str_to_document()')
+        cleaned_string = input.strip("[]")
+
+        # Split into individual items
+        items = re.split(r'\], \[', cleaned_string)
+
+        # Initialize list to hold the parsed dictionaries
+        documents = []
+
+        # Parse each item
+        for item in items:
+            # Initialize dictionary
+            parsed_dict = {}
+            
+            # Find all key-value pairs
+            key_value_pairs = re.findall(r'(\w+):\s([^,]+)', item)
+            
+            # Fill the dictionary
+            for key, value in key_value_pairs:
+                parsed_dict[key] = value.strip()
+            
+            # Create Document instance
+            doc = Document(
+                page_content=parsed_dict['snippet'],
+                metadata={
+                    'title': parsed_dict['title'],
+                    'link': parsed_dict['link']
+                }
+            )
+            
+            # Append to the list
+            documents.append(doc)
+        return documents
+    
+    def update_chat_history(self, question: str, answer: str):
+        self.chat_history.extend([HumanMessage(content=question), AIMessage(content=answer)])
+        return self.chat_history

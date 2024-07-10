@@ -1,6 +1,26 @@
 from langchain import hub
 from langchain.prompts import PromptTemplate
 
+# rephrase_prompt = hub.pull("langchain-ai/chat-langchain-rephrase")
+rephrase_prompt = PromptTemplate(
+    template=""""
+    Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question.
+
+    Chat History:
+
+    {chat_history}
+
+    Follow Up Input: {input}
+
+    Standalone Question:
+    answer Template:
+    {{
+        "question": "Standalone Question",
+    }}
+    """,
+    input_variables=["chat_history", "input"],
+)
+
 
 grader_prompt = PromptTemplate(
     template="""You are a grader assessing relevance of a retrieved document to a user question. \n 
@@ -52,11 +72,19 @@ answers_grader_prompt = PromptTemplate(
     input_variables=["generation", "question"],
 )
 
-re_write_prompt = PromptTemplate(
-    template="""You a question re-writer that converts an input question to a better version that is optimized \n 
-     for vectorstore retrieval. Look at the initial and formulate an improved question. \n
-     Here is the initial question: \n\n {question}. Improved question with no preamble: \n """,
-    input_variables=["generation", "question"],
+re_write_prompt =PromptTemplate(
+    template = """Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question.
+    if the chat history is empty, the follow up question should be returned exactly as it is.
+
+    Chat History:
+
+    {chat_history}
+
+    Follow Up Input: {question}
+
+    Answer as a JSON object with a single key 'standalone_question' and no preamble or explanation.
+    """,
+    input_variables=["chat_history", "question"],
 )
 
 domain_detection = PromptTemplate(
