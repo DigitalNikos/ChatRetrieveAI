@@ -5,7 +5,7 @@ from langchain_core.documents import Document
 from streamlit_chat import message
 
 from extract_source import upload_pdf, upload_url
-from rag import ChatPDF
+from rag.rag import ChatPDF
 
 
 st.set_page_config(page_title="ChatPDF", page_icon="🤖")
