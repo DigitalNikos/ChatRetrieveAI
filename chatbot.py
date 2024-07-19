@@ -11,22 +11,17 @@ from rag import ChatPDF
 st.set_page_config(page_title="ChatPDF", page_icon="🤖")
 
 def display_messages():
-    print("Calling =>chatbot.py - display_messages()")
+    """Display chat messages in the Streamlit app."""
+    print("\nCalling =>chatbot.py - display_messages()")
 
     for i, (msg, is_user) in enumerate(st.session_state["messages"]):
-        # Ensure the message is JSON serializable
-        if isinstance(msg, str):
-            display_msg = msg
-        elif isinstance(msg, Document):  
-            display_msg = msg.page_content  
-        else:
-            display_msg = str(msg)  # Convert to string or handle as needed
-    
+        display_msg = msg.page_content if isinstance(msg, Document) else str(msg)
         message(display_msg, is_user=is_user, key=str(i), avatar_style="bottts", seed=2)
     st.session_state["thinking_spinner"] = st.empty()
 
 def process_input():
-    print("Calling =>chatbot.py - process_input()")
+    """Process user input and get a response from the assistant."""
+    print("\nCalling =>chatbot.py - process_input()")
     
     if st.session_state["user_input"] and len(st.session_state["user_input"].strip()) > 0:
         user_text = st.session_state["user_input"].strip()
@@ -38,7 +33,8 @@ def process_input():
 
 
 def read_and_save_file(domain: str, source_type: str):
-    print("Calling =>chatbot.py - read_and_save_file()")
+    """Handle file or URL upload and initiate document ingestion."""
+    print("\nCalling =>chatbot.py - read_and_save_file()")
 
     action = cfg.UPLOAD_ACTIONS.get(source_type)
     if action:
@@ -54,12 +50,11 @@ def clear_session_state():
     st.session_state["messages"] = []
     st.session_state["assistant"] = ChatPDF()
     st.session_state["domain"] = ""
-    st.session_state["ingested_documents"] = set()
-    st.session_state["ingested_urls"] = set()
 
 
 def page():
-    print("Calling =>chatbot.py - page()")
+    """Main function to handle the Streamlit page layout and interactions."""
+    print("\nCalling =>chatbot.py - page()")
     initialize_session_state()
 
     # Update the header with the domain if set
@@ -70,7 +65,7 @@ def page():
         col1, col2 = st.columns([4, 1])
         with col1:
             st.header(f"Chatbot {st.session_state['domain']} domain 🤖 💬")
-            st.caption("🚀 ChatRetrieveAI: Using RAG for Document and Wikipedia Interaction.")
+            st.caption("🚀 ChatRetrieveAI: Using RAG for Document and Web search Interaction.")
             if not st.session_state["messages"]:
                 domain_message = f"Welcome to our  {st.session_state['domain']} domain support chat! How can I assist you today?"
                 st.session_state["messages"] = [(domain_message, False)]
@@ -122,7 +117,7 @@ def page():
 
         st.session_state["ingestion_spinner"] = st.empty()
         display_messages()
-        st.chat_input("Messageeeee", key="user_input", on_submit=process_input)
+        st.chat_input("Send message to Chatbot", key="user_input", on_submit=process_input)
 
 
 if __name__ == "__main__":

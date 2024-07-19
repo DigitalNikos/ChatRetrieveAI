@@ -10,9 +10,9 @@ ChatRetrieveAI is a chatbot application that uses the Retrieval-Augmented Genera
 
 ✅ Documents(.txt .docs urls) Ingestion: TODO
 
-❌ Chat History: TODO
+✅ Chat History: TODO
 
-❌ Show metadata to answer(filename, page, url): TODO
+✅ Show metadata to answer(filename, page, url): TODO
 
 ✅ Domain: Users are able to choose specific domain for the Chatbot conversation.
 
