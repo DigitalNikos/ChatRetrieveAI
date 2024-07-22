@@ -1,4 +1,5 @@
 from langgraph.graph import END, StateGraph, START
+from IPython.display import Image, display
 
 class WorkflowInitializer:
 
@@ -85,5 +86,15 @@ class WorkflowInitializer:
                 "not useful": END,
             },
         )
+        app = workflow.compile()
         
-        return workflow.compile()
+        try:
+            image_data = app.get_graph(xray=True).draw_mermaid_png()
+            with open("output_image.png", "wb") as file:
+                file.write(image_data)
+            print("Image saved to output_image.png")
+        except Exception:
+            # This requires some extra dependencies and is optional
+            print("Could not save image")
+            pass
+        return app

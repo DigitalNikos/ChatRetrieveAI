@@ -1,7 +1,5 @@
-import re
 from langchain_core.documents import Document
-from copy import deepcopy
-# from bs4 import BeautifulSoup
+import re
 
 def clean_text(chunks, file_name:str):
     print("Calling =>clean_text.py - clean_text()")

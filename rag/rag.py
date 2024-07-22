@@ -1,13 +1,15 @@
-from config import Config as cfg
-from knowledge_base_system import KnowledgeBaseSystem
 
 from langchain_community.chat_models import ChatOllama
+from langchain_core.output_parsers import JsonOutputParser
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores.utils import filter_complex_metadata
-from text_doc_processing import clean_text
-from prompts import domain_detection, domain_check
-from langchain_core.output_parsers import JsonOutputParser
+
+from config import Config as cfg
 from rag.vectordb import VectorDB
+from text_doc_processing import clean_text
+from qa_system.qa_manager import KnowledgeBaseSystem
+from rag.rag_prompts import domain_detection, domain_check
+
 
 class ChatPDF:
     print("Calling =>rag.py - ChatPDF")
@@ -20,9 +22,9 @@ class ChatPDF:
         self.retriever = None
         self.knowledge_base_system = KnowledgeBaseSystem(cfg.MODEL)
         
-        self.summary_domain_chain = domain_detection | self.json_llm | JsonOutputParser()
         self.domain_checking = domain_check | self.json_llm | JsonOutputParser()
-
+        self.summary_domain_chain = domain_detection | self.json_llm | JsonOutputParser()
+        
 
     def ingest(self,sources: dict):
         print('\nCalling => rag.py - ingest()')
@@ -48,14 +50,20 @@ class ChatPDF:
         print("C\nhunks URL: ", chunks)
 
         result = self.summary_domain_chain.invoke({"documents": chunks})
+        
+        print("Result for domain detection: ", result)
+        
         result = self.domain_checking.invoke({"domain": sources['domain'], "summary": result["summary"], "doc_domain": result["domain"]})  
 
+        print("Result for summary: ", result)
+        
         if result["score"] == "no":
             return result["score"]
         
         self.vector_db.add_documents(chunks)
         if not self.retriever:
             self.retriever = self.vector_db.as_retriever()
+            print("Retriever set")
             self.knowledge_base_system.set_retriever(self.retriever)
             
 

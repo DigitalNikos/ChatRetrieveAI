@@ -1,19 +1,18 @@
 from langchain_community.chat_models import ChatOllama
 from langchain_core.output_parsers import JsonOutputParser
-from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain.chains import create_history_aware_retriever
+from langchain_community.tools import DuckDuckGoSearchResults
 
 from tqdm import tqdm
 from typing import List
 from typing_extensions import TypedDict
 
-from lang_graph import WorkflowInitializer
+from qa_system.lang_graph import WorkflowInitializer
 from text_doc_processing import convert_str_to_document
-
-from prompts import (generate_answer_propmpt,rephrase_prompt, 
+from qa_system.prompts import (generate_answer_propmpt,rephrase_prompt, 
                      grader_document_prompt, hallucination_grader_prompt, 
-                     answers_grader_prompt, domain_check, query_domain_check, domain_detection)
+                     answers_grader_prompt, query_domain_check)
 
 
 class KnowledgeBaseSystem:
@@ -44,8 +43,6 @@ class KnowledgeBaseSystem:
         self.generate_answe = generate_answer_propmpt | self.json_llm | JsonOutputParser()
         self.hallucination_grader_chain = hallucination_grader_prompt | self.json_llm | JsonOutputParser()
         self.answer_grader_chain = answers_grader_prompt | self.json_llm | JsonOutputParser()
-        self.summary_domain_chain = domain_detection | self.json_llm | JsonOutputParser()
-        self.domain_checking = domain_check | self.json_llm | JsonOutputParser()
         self.search_ddg_search_results = DuckDuckGoSearchResults(num_results = 2, verbose = True)
         
         # GRAPH APP
@@ -220,7 +217,9 @@ class KnowledgeBaseSystem:
         documents = state["documents"]
         
         generation = self.generate_answe.invoke({"context": documents, "question": question, "chat_history": self.chat_history})
+        print("*" * 40)
         print("\nAnswer from RAG:", generation)
+        print("*" * 40)
 
         return {"documents": documents, "question": question, "generation": generation}
 
@@ -338,6 +337,10 @@ class KnowledgeBaseSystem:
         print("\n--- HALLUCINATIONS CHECK ---")
         documents = state["documents"]
         generation = state["generation"]
+        
+        print("*"*40)
+        print("generation: ", generation)
+        print("*"*40)
 
         score = self.hallucination_grader_chain.invoke({"documents": documents, "generation": generation})
         grade = score["score"]
@@ -364,6 +367,10 @@ class KnowledgeBaseSystem:
         print("\n--- FINAL ANSWER CHECK ---")
         question = state["question"]
         generation = state["generation"]
+        
+        print("*"*40)
+        print("generation: ", generation)
+        print("*"*40)
 
         score = self.answer_grader_chain.invoke({"question": question, "generation": generation})
         grade = score["score"]
@@ -414,7 +421,8 @@ class KnowledgeBaseSystem:
             print("Error: ", e)
             answer = {"generation": "I don't know the answer to that question"}
             
-        # self.update_chat_history(inputs['question'], answer['generation']['answer'])
+        print("Answer: ", answer)
+        self.update_chat_history(inputs['question'], answer['generation']['answer'])
         return answer['generation']
      
     def update_chat_history(self, question: str, answer: str):
