@@ -1,5 +1,4 @@
 from langgraph.graph import END, StateGraph, START
-from IPython.display import Image, display
 
 class WorkflowInitializer:
 
@@ -20,7 +19,6 @@ class WorkflowInitializer:
         workflow.add_node("ddg_search", self.system._ddg_search)
         workflow.add_node("answer_check", self.system._answer_check)
         workflow.add_node("hallucination_check", self.system._hallucination_check)
-        workflow.add_node("end_with_hallucination_message", self.system._end_with_hallucination_message)
         
         workflow.add_conditional_edges(
             "check_query_domain",
@@ -66,7 +64,7 @@ class WorkflowInitializer:
             "hallucination_check",
             lambda state: state["hallucination"],
             {
-                "yes": "end_with_hallucination_message",
+                "yes": END,
                 "no": "answer_check",
             },
          )
@@ -84,9 +82,9 @@ class WorkflowInitializer:
         
         try:
             image_data = app.get_graph(xray=True).draw_mermaid_png()
-            with open("output_image.png", "wb") as file:
+            with open("graph_img/output_image.png", "wb") as file:
                 file.write(image_data)
-            print("Image saved to output_image.png")
+            print("\nImage saved to output_image.png")
         except Exception:
             print("Could not save image")
             pass
