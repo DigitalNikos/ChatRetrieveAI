@@ -24,9 +24,11 @@ class KnowledgeBaseSystem:
         """
         print('\n--- GRAPH STATE ---')
         question: str
-        generation: str
+        answer: str
         documents: List[str]
         domain: str
+        hallucination: str
+        generation_score: str
 
     def __init__(self, llm_name: str, retirver = None):  
         print('\nknowledge_base_system.py - __init__()')    
@@ -70,108 +72,30 @@ class KnowledgeBaseSystem:
         answer = self.query_domain_check.invoke({"question": question, "domain": domain})
         print("\nAnswer:    {}".format(answer))
         
-        state['generation'] = answer['score']  
+        state['generation_score'] = answer['score']  
+        state['answer'] = {"answer": "I don't know the answer to that question.", "metadata": "No metadata"}
         return state
     
     
-    def _handle_domain_relevance_with_rephrase(self, state: GraphState):
+    def _rephrase_query(self, state: GraphState):
         """
-        Determine the next step based on domain relevance, with rephrasing option.
+        Transform the query to produce a better question.
         
         Args:
-            state (GraphState): Contains the 'generation' key.
-
+            state (dict): The current graph state
+            
         Returns:
-            str: "retrieve" if relevant, otherwise "rephrase".
+            state (dict): Updates 'question' key with a re-phrased question
         """
-        print("\n--- CHECKING DOMAIN RELEVANCE QUERY (WITH REPHRASE) ---")
+        print("\n--- REPHRASE QUERY ---")
+        print("\nAnswer:           {}".format(state["answer"]))
+        print("\nQuestion:         {}".format(state["question"]))
         
-        if state["generation"] == "yes":
-            print("\nQuery is relevant to domain:       retrieve")
-            return "retrieve"
-        else:
-            print("\nQuery is not relevant to domain:   rephrase")
-            return "rephrase"
-    
-    
-    def _handle_domain_relevance_with_end(self, state: GraphState):
-        """
-        Determine the next step based on domain relevance, with ending option.
+        rephrased_query = self.rephrase_query_chain.invoke({"input": state["question"], "chat_history": self.chat_history})
         
-        Args:
-            state (GraphState): Contains the 'generation' key.
-
-        Returns:
-            str: "retrieve" if relevant, otherwise "end".
-        """
-        print("\n--- CHECKING DOMAIN RELEVANCE QUERY (WITH END) ---")
-        
-        if state["generation"] == "yes":
-            print("\nQuery is relevant to domain:       retrieve")
-            return "retrieve"
-        else:
-            print("\nQuery is not relevant to domain:   end")
-            return "end"
+        print("\nRephrased query:  {}".format(rephrased_query))
+        return {"question": rephrased_query['question']}
    
-        
-    def _existing_docs_condition(self, state: GraphState):
-        """
-        Determine the next step based on the existence of documents, with "ddg_search" option.
-
-        Args:
-            state (GraphState): Contains the 'documents' key.
-            
-        Returns:
-            str: "generate" if documents exist, otherwise "ddg_search".
-        """
-        print("\n--- CHECK EXISTING DOCUMENTS CONDITION ---")
-        
-        if state["documents"]:
-            print("\nDECISION: documents exist, proceed to genarate.")
-            return "grade_docs"
-        else:
-            print("\nDECISION: documents NOT exist, proceed to ddg search.")
-            return "ddg_search"
-    
-    
-    def _existing_ddg_docs_condition(self, state: GraphState):
-        """
-        Determine the next step based on the existence of ddg documents, with "end" option.
-        
-        Args:
-            state (GraphState): Contains the 'documents' key.
-
-        Returns:
-            str: "grade_docs" if documents exist, otherwise "end".
-        """
-        print("\n--- CHECK EXISTING DOCUMENTS CONDITION ---")
-        
-        if state["documents"]:
-            print("\nDECISION: documents exist, proceed to genarate.")
-            return "grade_docs"
-        else:
-            print("\nDECISION: documents NOT exist, proceed to ddg search.")
-            return "end"
-
-    def hallucination_condition(self, state: GraphState):
-        """
-            Determines the next step based on the hallucination score of the generation.
-            
-            Args:
-                state (GraphState): Contains the 'score' and 'generation' keys.
-                
-            Returns:
-                str: The value of 'score' indicating the hallucination condition.
-            """
-        print("\n--- CHECK HALLUCINATION CONDITION ---")
-        
-        if state["score"] != "useful":
-            print("\n---DECISION: GENERATION IS NOT USEFUL, CLEARING GENERATION---")
-            state['generation'] = ""    
-        else:
-            print("\n---DECISION: GENERATION IS USEFUL---")        
-        return state['score']
-        
     
     def _retrieve(self, state: GraphState):
         """
@@ -190,15 +114,13 @@ class KnowledgeBaseSystem:
             state["documents"] = []
             return state
         
-        question = state["question"]
-        
-        print("\nQuestion to retrive:    {}".format(question))
+        print("\nQuestion to retrive:    {}".format(state["question"]))
 
         chat_retriever_chain = create_history_aware_retriever(self.json_llm, self.retriever, rephrase_prompt)
-        documents = chat_retriever_chain.invoke({"input": question, "chat_history": self.chat_history})
-        print("\nRetrieved Documents:    {}".format(documents))
+        documents = chat_retriever_chain.invoke({"input": state["question"], "chat_history": self.chat_history})
         
-        return {"documents": documents, "question": question}
+        print("\nRetrieved Documents:    {}".format(documents))
+        return {"documents": documents, "question": state["question"]}
     
 
     def _generate(self, state: GraphState):
@@ -211,17 +133,16 @@ class KnowledgeBaseSystem:
         Returns:
             dict: Updated state with a new key 'generation' containing the LLM generation.
         """
-        print("\n---GENERATE ANSWER---")
+        print("\n--- GENERATE ANSWER ---")
         
         question = state["question"]
         documents = state["documents"]
         
         generation = self.generate_answe.invoke({"context": documents, "question": question, "chat_history": self.chat_history})
-        print("*" * 40)
-        print("\nAnswer from RAG:", generation)
-        print("*" * 40)
+        
+        print("\nAnswer:                 {}".format(generation))
 
-        return {"documents": documents, "question": question, "generation": generation}
+        return {"documents": documents, "question": question, "answer": generation}
 
 
     def _grade_documents(self, state: GraphState):
@@ -257,28 +178,6 @@ class KnowledgeBaseSystem:
         return {"documents": filtered_docs, "question": question}
 
 
-    def _rephrase_query(self, state: GraphState):
-        """
-        Transform the query to produce a better question.
-        
-        Args:
-            state (dict): The current graph state
-            
-        Returns:
-            state (dict): Updates 'question' key with a re-phrased question
-        """
-        print("\n--- REPHRASE QUERY ---")
-        
-        question = state["question"]
-        documents = state["documents"]
-        print("\nQuestion:         {}".format(question))
-        
-        rephrased_query = self.rephrase_query_chain.invoke({"input": question, "chat_history": self.chat_history})
-        print("\nRephrased query:  {}".format(rephrased_query))
-        
-        return {"documents": documents, "question": rephrased_query['question']}
-
-
     def _ddg_search(self, state: GraphState):
         """
         Perform a DuckDuckGo search and retrieve documents.
@@ -298,29 +197,6 @@ class KnowledgeBaseSystem:
         print("Documents DDG: ", documents)
         
         return {"documents": documents, "question": question}
-        
-
-    def _decide_to_generate(self, state: GraphState):
-        """
-        Determines whether to generate an answer, or re-generate a question.
-        
-        Args:
-            state (dict): The current graph state
-            
-        Returns:
-            str: Binary decision for next node to call
-        """
-        print("\n--- DECIDE TO GENERATE ---")
-        
-        question = state["question"]
-        filtered_documents = state["documents"]
-
-        if not filtered_documents:
-            print("DESICION:  No relevant documents found.")
-            return "end"
-        else:
-            print("DECISION: generate.")
-            return "generate"
 
     
     def _hallucination_check(self, state: GraphState):
@@ -336,7 +212,7 @@ class KnowledgeBaseSystem:
 
         print("\n--- HALLUCINATIONS CHECK ---")
         documents = state["documents"]
-        generation = state["generation"]
+        generation = state["answer"]
         
         print("*"*40)
         print("generation: ", generation)
@@ -348,6 +224,7 @@ class KnowledgeBaseSystem:
         if grade == "yes":
             print("---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---")
             state["hallucination"] = "no"
+            print("State in Hallucination: ", state)
         else:
             print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RE-TRY---")
             state["hallucination"] = "yes"
@@ -366,23 +243,29 @@ class KnowledgeBaseSystem:
         """
         print("\n--- FINAL ANSWER CHECK ---")
         question = state["question"]
-        generation = state["generation"]
-        
-        print("*"*40)
-        print("generation: ", generation)
-        print("*"*40)
+        generation = state["answer"]
 
         score = self.answer_grader_chain.invoke({"question": question, "generation": generation})
         grade = score["score"]
         
-        print("Score: ", score)
+        print("Anser Check Score:      {}".format(grade))
 
-        if grade == "yes":
-            print("---DECISION: GENERATION ADDRESSES QUESTION---")
-            state["score"] = "useful"
-        else:
-            print("---DECISION: GENERATION DOES NOT ADDRESS QUESTION---")
-            state["score"] = "not useful"
+        state["score"] = "useful" if grade == "yes" else "not useful"
+        print(f"---DECISION: GENERATION {'ADDRESSES' if grade == 'yes' else 'DOES NOT ADDRESS'} QUESTION---")
+        return state
+    
+    def _end_with_document_message(self, state: GraphState):
+        """
+        Ends the workflow with a message indicating no documents were found.
+
+        Args:
+            state (GraphState): The current graph state
+
+        Returns:
+            dict: Updated state with document message
+        """
+        print("\nCalling => knowledge_base_system.py - _end_with_document_message()")
+        state["generation"] = "I don't have any documents to answer that question."
         return state
     
     
@@ -419,11 +302,18 @@ class KnowledgeBaseSystem:
             print("Answer in invoke: ", answer)
         except Exception as e:
             print("Error: ", e)
-            answer = {"generation": "I don't know the answer to that question"}
+            answer = {"answer": "I don't know the answer to that question"}
             
-        print("Answer: ", answer)
-        self.update_chat_history(inputs['question'], answer['generation']['answer'])
-        return answer['generation']
+        if 'answer' in answer and isinstance(answer['answer'], dict):
+            response = answer['answer'].get('answer', 'No answer provided.')
+            metadata = answer['answer'].get('metadata', 'No metadata available.')
+            formatted_response = f"{response}\n\nMetadata: {metadata}"
+        else:
+            formatted_response = answer.get('answer', 'No answer provided.')
+
+        
+        # self.update_chat_history(inputs['question'], answer['generation']['answer'])
+        return formatted_response
      
     def update_chat_history(self, question: str, answer: str):
         self.chat_history.extend([HumanMessage(content=question), AIMessage(content=answer)])
