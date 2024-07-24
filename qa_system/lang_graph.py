@@ -10,9 +10,9 @@ class WorkflowInitializer:
         print('\nCalling => langgraph.py - WorkflowInitializer.initialize()')    
         workflow = StateGraph(self.system.GraphState)
 
-        workflow.add_edge(START, "check_query_domain")
+        workflow.set_entry_point("check_query_domain")
         workflow.add_node("check_query_domain", self.system._check_query_domain)
-        workflow.add_node("rephrase", self.system._rephrase_query)
+        workflow.add_node("rephrase_based_history", self.system._rephrase_query)
         workflow.add_node("retrieve", self.system._retrieve)   
         workflow.add_node("grade_docs", self.system._grade_documents)     
         workflow.add_node("check_query_domain_end", self.system._check_query_domain)
@@ -24,47 +24,40 @@ class WorkflowInitializer:
         
         workflow.add_conditional_edges(
             "check_query_domain",
-            self.system._handle_domain_relevance_with_rephrase,
+            lambda state: state["generation_score"],
             {
-                "retrieve": "retrieve",
-                "rephrase": "rephrase",
+                "yes": "retrieve",
+                "no": "rephrase_based_history",
             },
         )
         
-        workflow.add_edge("rephrase", "check_query_domain_end")
+        workflow.add_edge("rephrase_based_history", "check_query_domain_end")
         workflow.add_conditional_edges(
             "check_query_domain_end",
-            self.system._handle_domain_relevance_with_end,
+            lambda state: state["generation_score"],
             {
-                "retrieve": "retrieve",
-                "end": END,
+                "yes": "retrieve",
+                "no": END,
             },
         )
         
-        workflow.add_conditional_edges(
-            "retrieve",
-            self.system._existing_docs_condition,
-            {
-                "grade_docs": "grade_docs",
-                "ddg_search": "ddg_search",
-            },
-        )
+        workflow.add_edge("retrieve", "grade_docs")
         
         workflow.add_conditional_edges(
             "grade_docs",
-            self.system._decide_to_generate,
+            lambda state: "yes" if state["documents"] else "no",
             {
-                "generate": "generate",
-                "end": END,
-            }
+                "yes": "generate",
+                "no": "ddg_search",
+            },
         )
         
         workflow.add_conditional_edges(
             "ddg_search",
-            self.system._existing_ddg_docs_condition,
+            lambda state: "yes" if state["documents"] else "no",
             {
-                "grade_docs": "grade_docs",
-                "end": END,
+                "yes": "grade_docs",
+                "no": END,
             }
         )
         
@@ -86,6 +79,7 @@ class WorkflowInitializer:
                 "not useful": END,
             },
         )
+        
         app = workflow.compile()
         
         try:
@@ -94,7 +88,6 @@ class WorkflowInitializer:
                 file.write(image_data)
             print("Image saved to output_image.png")
         except Exception:
-            # This requires some extra dependencies and is optional
             print("Could not save image")
             pass
         return app
