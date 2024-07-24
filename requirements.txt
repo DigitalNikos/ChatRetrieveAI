@@ -10,3 +10,8 @@ langgraph
 langchainhub
 docx2txt
 duckduckgo-search
+ipython
+ipykernel  
+sentence_transformers
+jupyter
+pyppeteer
