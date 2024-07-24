@@ -6,6 +6,8 @@ __pycache__/
 .chat_env
 .env
 .venv
+.chat_fix/
+chat_fix/
 chat_env/
 chat/
 env/
