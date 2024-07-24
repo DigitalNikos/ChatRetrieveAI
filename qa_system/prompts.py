@@ -3,31 +3,34 @@ from langchain.prompts import PromptTemplate
 from langchain.output_parsers import ResponseSchema, StructuredOutputParser
 
 query_domain_check =PromptTemplate(
-    template="""You are a grader assessing for this 
-    specific {domain}, relevance whether a user question falls within a specified domain. \n
+    template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+    You are a grader assessing whether a user question falls within the specified {domain} domain.\n 
+    Your task is to determine if the question is directly related to {domain} by considering the content and context of the question.\n
     Give a binary score 'yes' or 'no' score to indicate whether the domain is relevant to the question. \n
     Provide the binary score as a JSON with a single key 'score' and no premable or explanation.
+    <|eot_id|><|start_header_id|>user<|end_header_id|>
     Here is the user question: {question} \n 
+    Answer: <|eot_id|><|start_header_id|>assistant<|end_header_id|>
     """,
     input_variables=["question", "domain"],
 )
 
 rephrase_prompt = PromptTemplate(
-    template="""You are a helpful AI assistant specialized in rephrasing and improving questions.\n
-    Given the following conversation and a follow up question,\n 
-    rephrase the follow up question to be a standalone question.
-    if the history is empty, the follow up question should be returned exactly as it is.
-    if the follow up question is already a standalone question, return it as it is.
-    if the follow up question is not relevant to the chat history, return it as it is.
-    Chat History:  {chat_history}
+    template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+    If the follow-up question is already a standalone question or is not relevant to the last user question, return it exactly as it is.
+    If the follow-up question needs context from the last user question to be understood, rephrase it to be a standalone question.
     
-    Here is the Follow Up question: {input} 
+    Given the last user question and a follow-up question:
     
-    Standalone Question:
     answer Template:
     {{
-        "question": "Standalone Question",
+        'question': "Standalone Question",
     }}
+    
+    <|eot_id|><|start_header_id|>user<|end_header_id|>
+    Last User Question: {chat_history}
+    Follow-Up Question: {input}
+    <|eot_id|><|start_header_id|>assistant<|end_header_id|>
     """,
     input_variables=[ "intput", "chat_history"],
 )
@@ -55,13 +58,13 @@ response_schemas = [
 output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
 format_instructions = output_parser.get_format_instructions()
 generate_answer_propmpt = PromptTemplate(
-        template="""You are an assistant for question-answering tasks. 
+        template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+        You are an assistant for question-answering tasks. 
         Use the following pieces of retrieved context to answer the question. 
         Also i will provide you the chat history. If it is empty, you can ignore it. if it is not empty, you can use it to answer the question.
         If you don't know the answer, just say that you don't know. 
-        Use three sentences maximum and keep the answer concise.
         return a JSON with the key 'answer' and 'metadata', metadata should reference the metadata from used Document objects. 
-
+        <|eot_id|><|start_header_id|>user<|end_header_id|>
         Context: {context} 
         
         Chat History: {chat_history}
@@ -69,6 +72,7 @@ generate_answer_propmpt = PromptTemplate(
         Question: {question} 
         
         format instructions: {format_instructions}
+        <|eot_id|><|start_header_id|>assistant<|end_header_id|>
         """,
     input_variables=["context", "question", "chat_history"],
     partial_variables={"format_instructions": format_instructions},
