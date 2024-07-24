@@ -4,15 +4,19 @@
 
 ChatRetrieveAI is a chatbot application that uses the Retrieval-Augmented Generation (RAG) approach to interact with Documents and external sources like Wikipedia.
 
+## Graph
+
+![Graph](./graph_img/graph.png)
+
 ## Features
 
 ✅ Document Ingestion: Upload and ingest documents or URLs to create a searchable knowledge base.
 
-✅ Documents(.txt .docs urls) Ingestion: TODO
+✅ Documents(.txt .docs urls) Ingestion
 
-✅ Chat History: TODO
+✅ Chat History
 
-✅ Show metadata to answer(filename, page, url): TODO
+✅ Show metadata to answer(filename, page, url)
 
 ✅ Domain: Users are able to choose specific domain for the Chatbot conversation.
 
@@ -33,9 +37,9 @@ ChatRetrieveAI is a chatbot application that uses the Retrieval-Augmented Genera
    - Visit the Ollama page and download the software:
      [https://ollama.com](https://ollama.com)
 2. #### Pull the Mistral Model:
-   - Open a terminal and pull the Mistral model with the following command:
+   - Open a terminal and pull the llama3 model with the following command:
      ```
-     ollama pull mistral
+     ollama pull llama3
      ```
 3. #### Clone the Repository:
    - Clone the project repository from GitHub:
