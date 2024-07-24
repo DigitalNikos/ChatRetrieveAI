@@ -6,7 +6,7 @@ from langchain_community.vectorstores.utils import filter_complex_metadata
 
 from config import Config as cfg
 from rag.vectordb import VectorDB
-from text_doc_processing import clean_text
+from utils import clean_text, normalize_documents
 from qa_system.qa_manager import KnowledgeBaseSystem
 from rag.rag_prompts import domain_detection, domain_check
 
@@ -14,7 +14,7 @@ from rag.rag_prompts import domain_detection, domain_check
 class ChatPDF:
     print("Calling =>rag.py - ChatPDF")
 
-    def __init__(self,):
+    def __init__(self):
         print("Calling =>rag.py - ChatPDF - __init__()")
         self.json_llm = ChatOllama(model=cfg.MODEL, format="json", temperature=0) 
         self.domain = None
@@ -27,7 +27,7 @@ class ChatPDF:
         
 
     def ingest(self,sources: dict):
-        print('\nCalling => rag.py - ingest()')
+        print("\n--- INGEST DATA ---")
 
         source_extension = sources['source_extension']
 
@@ -46,12 +46,15 @@ class ChatPDF:
         chunks = self.text_splitter.split_documents(docs)
         chunks = filter_complex_metadata(chunks)
         chunks = clean_text(chunks, sources['file_name'])
+        chunks = normalize_documents(chunks)
 
-        print("C\nhunks URL: ", chunks)
+        # print("\nChunks Before update:     ", chunks)
 
         result = self.summary_domain_chain.invoke({"documents": chunks})
         
-        print("Result for domain detection: ", result)
+        print("\nResult data domain detection: ")
+        print("Summary:    {}".format(result["summary"]))
+        print("Domain:     {}".format(result["domain"]))
         
         result = self.domain_checking.invoke({"domain": sources['domain'], "summary": result["summary"], "doc_domain": result["domain"]})  
 
