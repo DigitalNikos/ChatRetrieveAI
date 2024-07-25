@@ -6,23 +6,22 @@ ChatRetrieveAI is a chatbot application that uses the Retrieval-Augmented Genera
 
 ## Graph
 
-![Graph](./graph_img/graph.png)
+![Graph](./graph_img/graph3.png)
 
 ## Features
 
-✅ Document Ingestion: Upload and ingest documents or URLs to create a searchable knowledge base.
+✅Streamlit Interface: User-friendly interface built with Streamlit for easy interaction.
 
-✅ Documents(.txt .docs urls) Ingestion
+✅ Contextual Chat: Engage in conversations with the chatbot, which uses the content of the uploaded PDFs and  
+ additional sources like DuckDuckGO.
+
+✅ Domain: Users are able to choose specific domain for the Chatbot conversation.
+
+✅ Document Ingestion: Upload and ingest documents (.txt .docs .pdf) or URLs to create a searchable knowledge base.
 
 ✅ Chat History
 
 ✅ Show metadata to answer(filename, page, url)
-
-✅ Domain: Users are able to choose specific domain for the Chatbot conversation.
-
-✅ Contextual Chat: Engage in conversations with the chatbot, which uses the content of the uploaded PDFs and additional sources like Wikipedia.
-
-✅Streamlit Interface: User-friendly interface built with Streamlit for easy interaction.
 
 ## Getting Started
 
