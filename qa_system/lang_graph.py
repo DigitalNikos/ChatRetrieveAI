@@ -13,7 +13,8 @@ class WorkflowInitializer:
         workflow.add_node("check_query_domain", self.system._check_query_domain)
         workflow.add_node("rephrase_based_history", self.system._rephrase_query)
         workflow.add_node("retrieve", self.system._retrieve)   
-        workflow.add_node("grade_docs", self.system._grade_documents)     
+        workflow.add_node("grade_docs", self.system._grade_documents) 
+        workflow.add_node("grade_ddg_docs", self.system._grade_documents)     
         workflow.add_node("check_query_domain_end", self.system._check_query_domain)
         workflow.add_node("generate", self.system._generate)
         workflow.add_node("ddg_search", self.system._ddg_search)
@@ -54,9 +55,18 @@ class WorkflowInitializer:
             "ddg_search",
             lambda state: "yes" if state["documents"] else "no",
             {
-                "yes": "grade_docs",
+                "yes": "grade_ddg_docs",
                 "no": END,
             }
+        )
+        
+        workflow.add_conditional_edges(
+            "grade_ddg_docs",
+            lambda state: "yes" if state["documents"] else "no",
+            {
+                "yes": "generate",
+                "no": END,
+            },
         )
         
         workflow.add_edge("generate", "hallucination_check")
