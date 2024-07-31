@@ -5,6 +5,9 @@ from extract_source import upload_pdf, upload_url
 @dataclass
 class Config:
     MODEL = "llama3"
+    MATH_MODEL = "mathstral"
+    MODEL_TEMPERATURE = 0.0
+    
     SPLITTER_CHUNK_SIZE = 256
     SPLITTER_CHUNK_OVERLAP = 100
     N_DOCUMENTS_TO_RETRIEVE = 3

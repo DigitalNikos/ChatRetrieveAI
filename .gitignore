@@ -16,4 +16,8 @@ env.bak/
 venv.bak/
 chat_env.bak/
 
+# Testing
+.pytest_cache/
+
 .DS_Store
+.deepeval

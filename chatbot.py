@@ -48,7 +48,7 @@ def initialize_session_state():
 
 def clear_session_state():
     st.session_state["messages"] = []
-    st.session_state["assistant"] = ChatPDF()
+    st.session_state["assistant"] = ChatPDF(cfg)
     st.session_state["domain"] = ""
 
 

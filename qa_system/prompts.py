@@ -15,6 +15,22 @@ query_domain_check =PromptTemplate(
     input_variables=["question", "domain"],
 )
 
+question_classifier_prompt = PromptTemplate(
+    template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+    You are an intelligent assistant trained to answer questions with 'yes' or 'no'. 
+    Your task is to determine if a mathematical calculation is required to answer the given query. 
+    If the query involves performing any kind of mathematical calculation (such as addition, subtraction, multiplication, division, finding percentages, solving equations, etc.), you should respond with 'yes'. 
+    If the query can be answered without performing any mathematical calculations, respond with 'no'. 
+
+    Give a binary score 'yes' or 'no' score to indicate whether the domain is relevant to the question. \n
+    Provide the binary score as a JSON with a single key 'score' and no premable or explanation.
+    <|eot_id|><|start_header_id|>user<|end_header_id|>
+    Here is the user question: {question} \n 
+    Answer: <|eot_id|><|start_header_id|>assistant<|end_header_id|> 
+    """,
+    input_variables=[ "question"],
+)
+
 rephrase_prompt = PromptTemplate(
     template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
     If the follow-up question is already a standalone question or is not relevant to the last user question, return it exactly as it is.
@@ -22,7 +38,7 @@ rephrase_prompt = PromptTemplate(
     
     Given the last user question and a follow-up question:
     
-    answer Template:
+    Answer Template:
     {{
         'question': "Standalone Question",
     }}
@@ -34,6 +50,7 @@ rephrase_prompt = PromptTemplate(
     """,
     input_variables=[ "intput", "chat_history"],
 )
+
 
 grader_document_prompt = PromptTemplate(
     template="""You are a grader assessing relevance of a retrieved document to a user question. \n 
@@ -104,5 +121,33 @@ answers_grader_prompt = PromptTemplate(
     input_variables=["generation", "question"],
 )
 
+math_solver = PromptTemplate(
+    template="""
+    You are an expert AI specialized in generating expressions for ne.evaluate(.) to solve arithmetic tasks.
+
+    Given specific numbers, write a NumExpr-compatible expression that directly calculates the result. The final expression must contain only numbers and operators, with no variables. Provide the output as a JSON object with 'step-wise reasoning' and 'expr'.
+
+    Example Task: 
+    Related Documents: [Cappuccinos cost $2, iced teas cost $3, cafe lattes cost $1.5 and espressos cost $1 each.]
+    Task: Sandy orders some drinks for herself and some friends. She orders three cappuccinos, two iced teas, two cafe lattes, and two espressos. 
+    How much change does she receive back for a twenty-dollar bill?
+    Answer: {{
+    'step-wise reasoning': [
+    'Calculate the total cost of three cappuccinos: 3 * 2',
+    'Calculate the total cost of two iced teas: 2 * 3',
+    'Calculate the total cost of two cafe lattes: 2 * 1.5',
+    'Calculate the total cost of two espressos: 2 * 1',
+    'Sum these costs to get the total expenditure',
+    'Subtract the total expenditure from 20 to find the change'
+    ],
+    'expr': '20 - (3 * 2 + 2 * 3 + 2 * 1.5 + 2 * 1)'
+    }}
+    
+    Your task:
+    Related Documents: {documents}\n
+    Task: {question} \n 
+    Answer:""",
+    input_variables=["question", "documents"],
+)
 
 

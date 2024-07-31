@@ -20,6 +20,8 @@ class WorkflowInitializer:
         workflow.add_node("ddg_search", self.system._ddg_search)
         workflow.add_node("answer_check", self.system._answer_check)
         workflow.add_node("hallucination_check", self.system._hallucination_check)
+        workflow.add_node("question_classification", self.system._question_classifier)
+        workflow.add_node("math_generate", self.system._math_generate)
         
         workflow.add_conditional_edges(
             "check_query_domain",
@@ -46,30 +48,43 @@ class WorkflowInitializer:
             "grade_docs",
             lambda state: "yes" if state["documents"] else "no",
             {
-                "yes": "generate",
+                "yes": "question_classification",
                 "no": "ddg_search",
             },
         )
         
-        workflow.add_conditional_edges(
-            "ddg_search",
-            lambda state: "yes" if state["documents"] else "no",
-            {
-                "yes": "grade_ddg_docs",
-                "no": END,
-            }
-        )
+        workflow.add_edge("ddg_search", "grade_ddg_docs")
         
         workflow.add_conditional_edges(
             "grade_ddg_docs",
             lambda state: "yes" if state["documents"] else "no",
             {
-                "yes": "generate",
+                "yes": "question_classification",
                 "no": END,
-            },
+            }
         )
         
+        workflow.add_conditional_edges(
+            "question_classification",
+            lambda state: state["question_type"],
+            {
+                "yes": "math_generate",
+                "no": "generate",
+            }
+        )
+        
+        # workflow.add_conditional_edges(
+        #     "grade_ddg_docs",
+        #     lambda state: "yes" if state["documents"] else "no",
+        #     {
+        #         "yes": "generate",
+        #         "no": END,
+        #     },
+        # )
+        
+        workflow.add_edge("math_generate", "answer_check")
         workflow.add_edge("generate", "hallucination_check")
+        
         workflow.add_conditional_edges(
             "hallucination_check",
             lambda state: state["hallucination"],
