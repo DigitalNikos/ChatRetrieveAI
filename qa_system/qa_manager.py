@@ -223,11 +223,12 @@ class KnowledgeBaseSystem:
         
         generation = self.chain_math.invoke({"question": state["question"], "documents": state["documents"]})
         steps_str = [f"Step {i+1}: {step}" for i, step in enumerate(generation['step-wise reasoning'])]
-        stepwise_str = "Solution:\n\n" + "\n".join(steps_str)
+        stepwise_str = "Solution:\n\n" + "\n".join(steps_str).replace('*', '\*')
+        expr_str = generation['expr'].replace('*', '\*')
         try:
-            state['answer'] = {"answer": f"{stepwise_str.replace('*', '\*')}\n\n Final answer: {generation['expr'].replace('*', '\*')} = {ne.evaluate(generation['expr'])}", "metadata": "Computed with python"}
+            state['answer'] = {"answer": f"{stepwise_str}\n\n Final answer: {expr_str} = {ne.evaluate(generation['expr'])}", "metadata": "Computed with python"}
         except Exception as e:
-            state['answer'] = {"answer": f"{stepwise_str.replace('*', '\*')}\n\n Final answer: {generation['expr'].replace('*', '\*')}", "metadata": "No metadata"}
+            state['answer'] = {"answer": f"{stepwise_str}\n\n Final answer: {expr_str}", "metadata": "No metadata"}
 
         print("\nAnswer:                 {}".format(state['answer']))
 
@@ -271,7 +272,7 @@ class KnowledgeBaseSystem:
         generation = state["answer"]
         score = self.hallucination_grader_chain.invoke({"documents": documents, "generation": generation}) 
         state["hallucination"] = "no" if score["score"] == "yes" else "yes"
-        print(f"\nDECISION: generation is {'grounded in documents' if score["score"] == 'yes' else 'not grounded in documents, re-try'}")
+        print(f"\nDECISION: generation is {'grounded in documents' if score['score'] == 'yes' else 'not grounded in documents, re-try'}")
         if score == "yes":
             state["answer"] = {'answer': "I don't know the answer to that question.", 'metadata': "No metadata"} 
             
