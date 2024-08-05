@@ -7,39 +7,35 @@ import unittest
 from rag.rag import ChatPDF
 from config import Config as cfg
 
-class TestMathClassifier(unittest.TestCase):
+
+
+class TestDomainCheck(unittest.TestCase):
     def setUp(self):
         cfg.MODEL_TEMPERATURE = 0.0
-        self.domain = "Technology"
-        test_dir = os.path.dirname(__file__)
-        file_path = os.path.join(test_dir, 'data', 'Quantum_Computing_Article_ChatGPT4o.pdf')
-        source_extension = ".pdf"
-        file_name = "Quantum_Computing_Article_ChatGPT4o.pdf"
-        
+        self.domain = "Sport"
         chat_pdf = ChatPDF(cfg)
-        chat_pdf.ingest({'file_path': file_path, 'source_extension': source_extension, 'file_name': file_name, 'domain': self.domain})
         self.kbs = chat_pdf.knowledge_base_system
     
     def test_positive_classification(self):
-        question = "If the demand for quantum computing specialists increases from 1,200 in 2021 to 3,000 in 2024, what is the total increase in specialist demand over these years?"
+        question = "How can AI improve basketball training?"
         inputs = {"question": question, "domain": self.domain, "execution_path": []}
         expected_classification = 'yes'
         
-        state = self.kbs._question_classifier(inputs)
+        state = self.kbs._check_query_domain(inputs)
         print(f"State: {state}")
         self.assertEqual(state['question'], question)
-        self.assertEqual(state['question_type'], expected_classification)
+        self.assertEqual(state['generation_score'], expected_classification)
+        
         
     def test_negative_classification(self):
-        question = "How much did global investment in quantum computing reach in 2023?"
+        question = "How is the weather today?"
         inputs = {"question": question, "domain": self.domain, "execution_path": []}
         expected_classification = 'no'
         
-        state = self.kbs._question_classifier(inputs)
+        state = self.kbs._check_query_domain(inputs)
         print(f"State: {state}")
         self.assertEqual(state['question'], question)
-        self.assertEqual(state['question_type'], expected_classification)
-        
+        self.assertEqual(state['generation_score'], expected_classification)
         
         
     def tearDown(self) -> None:

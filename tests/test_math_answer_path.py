@@ -20,7 +20,7 @@ class TestMathAnswerChatPdf(unittest.TestCase):
         self.chat_pdf = ChatPDF(cfg)
         self.chat_pdf.ingest({'file_path': file_path, 'source_extension': source_extension, 'file_name': file_name, 'domain': self.domain})
     
-    def test_math_question(self):
+    def test_rephrase_question(self):
         question = "If the demand for quantum computing specialists increases from 1,200 in 2021 to 3,000 in 2024, what is the total increase in specialist demand over these years?"
         # expected_answer ={'answer': 'Solution:\n\nStep 1: Calculate the difference between the demand for quantum computing specialists in 2024 and 2021\nStep 2: The result is the total increase in specialist demand over these years\n\n Final answer: (3000 - 1200) = 1800', 'metadata': 'Computed with python'}
         expected_execution_path = [
