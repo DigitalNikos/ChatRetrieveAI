@@ -15,6 +15,26 @@ query_domain_check =PromptTemplate(
     input_variables=["question", "domain"],
 )
 
+rephrase_prompt = PromptTemplate(
+    template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+    If the follow-up question lacks context rephrase it from the last user question to be understood, rephrase it to be a standalone question.
+    If the follow-up question is already a standalone question or is not relevant to the last user question, return it exactly as it is.
+    
+    Given the last user question and a follow-up question:
+    
+    Answer Template:
+    {{
+        'question': "Rephrased Standalone Question or Original Follow-Up Question",
+    }}
+    
+    <|eot_id|><|start_header_id|>user<|end_header_id|>
+    Last User Question: {chat_history}
+    Follow-Up Question: {input}
+    <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+    """,
+    input_variables=["input", "chat_history"],
+)
+
 question_classifier_prompt = PromptTemplate(
     template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
     You are an intelligent assistant trained to answer questions with 'yes' or 'no'. 
@@ -31,39 +51,23 @@ question_classifier_prompt = PromptTemplate(
     input_variables=[ "question"],
 )
 
-rephrase_prompt = PromptTemplate(
-    template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-    If the follow-up question is already a standalone question or is not relevant to the last user question, return it exactly as it is.
-    If the follow-up question needs context from the last user question to be understood, rephrase it to be a standalone question.
-    
-    Given the last user question and a follow-up question:
-    
-    Answer Template:
-    {{
-        'question': "Standalone Question",
-    }}
-    
-    <|eot_id|><|start_header_id|>user<|end_header_id|>
-    Last User Question: {chat_history}
-    Follow-Up Question: {input}
-    <|eot_id|><|start_header_id|>assistant<|end_header_id|>
-    """,
-    input_variables=[ "intput", "chat_history"],
-)
-
 
 grader_document_prompt = PromptTemplate(
-    template="""You are a grader assessing relevance of a retrieved document to a user question. \n 
+    template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+    You are a grader assessing relevance of a retrieved document to a user question. \n 
     Here is the retrieved document: \n {document} \n
     If the document contains keywords related to the user question, grade it as relevant. \n
     It does not need to be a stringent test. The goal is to filter out erroneous retrievals. \n
     Give a binary score 'yes' or 'no' score to indicate whether the document is relevant to the question. \n
     Provide the binary score as a JSON with a single key 'score' and no premable or explanation.
-
+    
+    <|eot_id|><|start_header_id|>user<|end_header_id|>
     Here is the user question: {question} \n
+    <|eot_id|><|start_header_id|>assistant<|end_header_id|> 
     """,
     input_variables=["question", "document"],
 )
+
 
 response_schemas = [
             ResponseSchema(name="answer", description="answer to the user's question"),
