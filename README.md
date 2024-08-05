@@ -2,11 +2,11 @@
 
 ## Overview
 
-ChatRetrieveAI is a chatbot application that uses the Retrieval-Augmented Generation (RAG) approach to interact with Documents and external sources like Wikipedia.
+ChatRetrieveAI is a chatbot application that uses the Retrieval-Augmented Generation (RAG) approach to interact with Documents and external sources like DuckDuckGO.
 
 ## Graph
 
-![Graph](./graph_img/graph3.png)
+![Graph](./graph_img/graph.png)
 
 ## Features
 
@@ -19,7 +19,7 @@ ChatRetrieveAI is a chatbot application that uses the Retrieval-Augmented Genera
 
 ✅ Document Ingestion: Upload and ingest documents (.txt .docs .pdf) or URLs to create a searchable knowledge base.
 
-✅ Chat History
+✅ Chat History.
 
 ✅ Show metadata to answer(filename, page, url)
 
