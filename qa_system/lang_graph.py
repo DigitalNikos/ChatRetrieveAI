@@ -43,7 +43,6 @@ class WorkflowInitializer:
         )
         
         workflow.add_edge("retrieve", "grade_docs")
-        
         workflow.add_conditional_edges(
             "grade_docs",
             lambda state: "yes" if state["documents"] else "no",
@@ -54,7 +53,6 @@ class WorkflowInitializer:
         )
         
         workflow.add_edge("ddg_search", "grade_ddg_docs")
-        
         workflow.add_conditional_edges(
             "grade_ddg_docs",
             lambda state: "yes" if state["documents"] else "no",
@@ -72,25 +70,23 @@ class WorkflowInitializer:
                 "no": "generate",
             }
         )
+
+        workflow.add_conditional_edges(
+            "math_generate",
+            lambda state: state["generation_score"],
+            {
+                "no": END,
+                "yes": "answer_check"
+            },
+        )
         
-        # workflow.add_conditional_edges(
-        #     "grade_ddg_docs",
-        #     lambda state: "yes" if state["documents"] else "no",
-        #     {
-        #         "yes": "generate",
-        #         "no": END,
-        #     },
-        # )
-        
-        workflow.add_edge("math_generate", "answer_check")
-        workflow.add_edge("generate", "hallucination_check")
-        
+        workflow.add_edge("generate", "hallucination_check")        
         workflow.add_conditional_edges(
             "hallucination_check",
             lambda state: state["hallucination"],
             {
-                "yes": END,
                 "no": "answer_check",
+                "yes": END,
             },
          )
         
