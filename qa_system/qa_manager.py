@@ -98,8 +98,9 @@ class KnowledgeBaseSystem:
         print("\n--- REPHRASE QUERY ---")
         print("\nQuestion:         {}".format(state["question"]))
         state['execution_path'].extend(["rephrase_based_history"])
-        
+        print("\nChat History:     {}".format(self.chat_history))
         chat_history_content = self.chat_history[-2].content if len(self.chat_history) >= 2 else ""
+        print("\nChat Historyyyyyyyyyy:  {}".format(chat_history_content))
         rephrased_query = self.rephrase_query_chain.invoke({"input": state["question"], "chat_history": chat_history_content})
         
         print("\nRephrased query:  {}".format(rephrased_query))
@@ -227,8 +228,10 @@ class KnowledgeBaseSystem:
         expr_str = generation['expr'].replace('*', '\*')
         try:
             state['answer'] = {"answer": f"{stepwise_str}\n\n Final answer: {expr_str} = {ne.evaluate(generation['expr'])}", "metadata": "Computed with python"}
+            state['generation_score'] = "yes"
         except Exception as e:
             state['answer'] = {"answer": f"{stepwise_str}\n\n Final answer: {expr_str}", "metadata": "No metadata"}
+            state['generation_score'] = "no"
 
         print("\nAnswer:                 {}".format(state['answer']))
 
