@@ -9,7 +9,7 @@ from typing import List
 from typing_extensions import TypedDict
 
 from qa_system.lang_graph import WorkflowInitializer
-from utils import convert_str_to_document
+from utils import convert_str_to_document, extract_limited_chat_history
 from qa_system.prompts import (generate_answer_propmpt,rephrase_prompt, 
                      grader_document_prompt, hallucination_grader_prompt, 
                      answers_grader_prompt, query_domain_check, question_classifier_prompt,math_solver)
@@ -39,6 +39,7 @@ class KnowledgeBaseSystem:
         print('\nknowledge_base_system.py - __init__()')    
         self.retriever = retriever
         self.chat_history = []
+        self.chat_rephrased_history = []
         
         # LLMs
         self.json_llm = ChatOllama(model=general_llm_model_name, format="json", temperature=temperature) 
@@ -96,11 +97,10 @@ class KnowledgeBaseSystem:
             state (dict): Updates 'question' key with a re-phrased question
         """
         print("\n--- REPHRASE QUERY ---")
-        print("\nQuestion:         {}".format(state["question"]))
         state['execution_path'].extend(["rephrase_based_history"])
-        print("\nChat History:     {}".format(self.chat_history))
-        chat_history_content = self.chat_history[-2].content if len(self.chat_history) >= 2 else ""
-        print("\nChat Historyyyyyyyyyy:  {}".format(chat_history_content))
+        print("\nQuestion:         {}".format(state["question"]))
+        
+        chat_history_content = extract_limited_chat_history(self.chat_rephrased_history, max_length=3500)
         rephrased_query = self.rephrase_query_chain.invoke({"input": state["question"], "chat_history": chat_history_content})
         
         print("\nRephrased query:  {}".format(rephrased_query))
@@ -323,6 +323,7 @@ class KnowledgeBaseSystem:
             answer = {"answer": "I don't know the answer to that question", "metadata": "No metadata"}
         
         self.chat_history.extend([HumanMessage(content=inputs['question']), AIMessage(content=answer['answer']['answer'])])
+        self.chat_rephrased_history.extend([HumanMessage(content=answer['question']), AIMessage(content=answer['answer']['answer'])])
         for message in self.chat_history:
             print("\nChat History:  {}".format(message))
         return answer
