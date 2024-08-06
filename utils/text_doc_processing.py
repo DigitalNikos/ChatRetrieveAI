@@ -1,4 +1,5 @@
 from langchain_core.documents import Document
+from langchain_core.messages import HumanMessage, AIMessage
 import re
 
 def clean_text(chunks, file_name:str):
@@ -115,3 +116,63 @@ def format_final_answer(answer):
             return f"{response}\n\nMetadata: {metadata}"
         else:
             return answer.get('answer', 'No answer provided.')
+        
+
+# def extract_chat_history(chat_history, max_length=3500, include_ai=False):
+#     """
+#     Extract chat history messages, ensuring the total character count doesn't exceed max_length.
+
+#     Args:
+#         max_length (int): Maximum total character count for the messages.
+#         include_ai (bool): Whether to include AI responses in the extraction.
+
+#     Returns:
+#         list: A list of messages (user and/or AI) from latest to newest, within the character limit.
+#     """
+#     current_length = 0
+#     chat_messages = []
+#     print("MAlakaia")
+#     # Iterate through chat history in reverse order to get the latest messages first
+#     for message in reversed(chat_history):
+#         if isinstance(message, HumanMessage) or (include_ai and isinstance(message, AIMessage)):
+#             message_content = message.content
+#             message_length = len(message_content)
+#             # Check if adding the current message exceeds the maximum allowed length
+#             if current_length + message_length > max_length:
+#                 break
+#             chat_messages.append(message_content)
+#             current_length += message_length
+            
+#     print("Big MAlakaia")
+
+#     return chat_messages
+
+
+def extract_limited_chat_history(chat_rephrased_history, max_length=3500):
+    """
+    Extract chat history messages, ensuring the total character count doesn't exceed max_length.
+
+    Args:
+        max_length (int): Maximum total character count for the messages.
+
+    Returns:
+        list: A list of messages (HumanMessage and AIMessage), within the character limit.
+    """
+    current_length = 0
+    chat_messages = []
+
+    # Iterate through chat history in reverse order to get the latest messages first
+    for message in chat_rephrased_history:
+        if isinstance(message, HumanMessage) or isinstance(message, AIMessage):
+            message_content = message.content
+            message_length = len(message_content)
+            # Check if adding the current message exceeds the maximum allowed length
+            if current_length + message_length > max_length:
+                break
+            chat_messages.append(message)
+            current_length += message_length
+    
+    print("Correct chat_messages: ", chat_messages)
+
+    # Reverse the list to maintain original chronological order
+    return chat_messages
