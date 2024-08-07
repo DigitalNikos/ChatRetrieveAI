@@ -18,10 +18,10 @@ class TestPath4(unittest.TestCase):
         file_name = "Application of Artificial_Intelligence_in_Basketball_Sport.pdf"
         
         self.chat_pdf = ChatPDF(cfg)
-        self.chat_pdf.ingest({'file_path': file_path, 'source_extension': source_extension, 'file_name': file_name, 'domain': self.domain})
+        # self.chat_pdf.ingest({'file_path': file_path, 'source_extension': source_extension, 'file_name': file_name, 'domain': self.domain})
     
     def test_path_4(self):
-        question = "What is my Name?"
+        question = "What is my nickname in Basketball?"
         expected_execution_path = [
             'check_query_domain', 
             'retrieve', 
@@ -43,12 +43,6 @@ class TestPath4(unittest.TestCase):
         # Check if the question is correctly classified as non-math
         self.assertEqual(state['question_type'], 'no')
         
-        # Check if initial documents are not retrieved from PDF
-        # self.assertTrue(len(state['documents']) == 0, "Initial documents should not be retrieved from the PDF.")
-        
-        # Check if documents are retrieved from DDG and graded
-        # self.assertTrue(len(state['documents']) > 0, "Documents should be retrieved from DDG search.")
-        
         # Check if the answer is generated and does not contain hallucinations
         self.assertEqual(state['hallucination'], 'no')
         
@@ -58,8 +52,6 @@ class TestPath4(unittest.TestCase):
         # Check if the final answer is "I don't know the answer to that question."
         self.assertEqual(state['answer']['answer'], "I don't know the answer to that question.")
         
-        # Print the final answer
-        print(f"Final Answer: {state['answer']['answer']}")
 
     def tearDown(self) -> None:
         return super().tearDown()

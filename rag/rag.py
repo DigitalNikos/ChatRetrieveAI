@@ -42,6 +42,7 @@ class ChatPDF:
             docs = self.cfg.LOADERS_TYPES[source_extension](sources["url"]).load()
         else:
             docs = self.cfg.LOADERS_TYPES[source_extension](sources["file_path"]).load()
+            print("Docs: ", docs)
 
         self.text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
             chunk_size=self.cfg.SPLITTER_CHUNK_SIZE, chunk_overlap=self.cfg.SPLITTER_CHUNK_OVERLAP

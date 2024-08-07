@@ -24,7 +24,7 @@ class TestDomainRelevance(unittest.TestCase):
         state = self.kbs._check_query_domain(inputs)
         print(f"State: {state}")
         self.assertEqual(state['question'], question)
-        self.assertEqual(state['generation_score'], expected_classification)
+        self.assertEqual(state['q_domain_relevance'], expected_classification)
         
         
     def test_negative__domain_relavance(self):
@@ -35,7 +35,7 @@ class TestDomainRelevance(unittest.TestCase):
         state = self.kbs._check_query_domain(inputs)
         print(f"State: {state}")
         self.assertEqual(state['question'], question)
-        self.assertEqual(state['generation_score'], expected_classification)
+        self.assertEqual(state['q_domain_relevance'], expected_classification)
         
         
     def tearDown(self) -> None:

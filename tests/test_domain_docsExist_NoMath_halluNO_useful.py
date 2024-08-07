@@ -35,11 +35,11 @@ class TestPath1ChatPdf(unittest.TestCase):
         inputs = {"question": question, "domain": self.domain}
         state = self.chat_pdf.invoke(inputs)
         
-        # Check if the question is in the spacified domain
-        self.assertEqual(state['q_domain_relevance'], 'yes')
-        
         # Check if the execution path is as expected until the last expected step
         self.assertEqual(state['execution_path'], expected_execution_path)
+        
+        # Check if the question is in the spacified domain
+        self.assertEqual(state['q_domain_relevance'], 'yes')
         
         # Check if the question is correctly classified as non-math
         self.assertEqual(state['question_type'], 'no')

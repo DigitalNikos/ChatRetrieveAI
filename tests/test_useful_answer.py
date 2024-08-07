@@ -25,7 +25,7 @@ class TestUsefulAnswer(unittest.TestCase):
         usuful_answer_classification = 'useful'
         
         state = self.kbs._answer_check(inputs)
-        provide_classification = state['score']
+        provide_classification = state['answer_useful']
         self.assertEqual(provide_classification, usuful_answer_classification)
     
     def  test_negative_useful_answer(self):
@@ -35,7 +35,7 @@ class TestUsefulAnswer(unittest.TestCase):
         usuful_answer_classification = 'not useful'
         
         state = self.kbs._answer_check(inputs)
-        provide_classification = state['score']
+        provide_classification = state['answer_useful']
         self.assertEqual(provide_classification, usuful_answer_classification)
 
         

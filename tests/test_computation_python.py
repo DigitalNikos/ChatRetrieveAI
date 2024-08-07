@@ -19,7 +19,7 @@ class TestComputationMethod(unittest.TestCase):
     def test_positive_question_classifier(self):
         
         question = "Using a predictive model with an accuracy rate of 84%, how many games would you expect to correctly predict out of a total of 500 NBA games?"
-        inputs = {"question": question, 'documents': [], "execution_path": []}
+        inputs = {"question": question, 'grade_documents': [], "execution_path": []}
         expected_classification = 'yes'
         
         state = self.kbs._math_generate(inputs)
@@ -30,7 +30,7 @@ class TestComputationMethod(unittest.TestCase):
         
     def test_negative__question_classifier(self):
         question = "Find the derivative of f(x) = 3x^2 + 2x + 1."
-        inputs = {"question": question,'documents': [], "execution_path": []}
+        inputs = {"question": question,'grade_documents': [], "execution_path": []}
         expected_classification = 'no'
         
         state = self.kbs._math_generate(inputs)

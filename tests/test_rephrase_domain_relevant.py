@@ -29,7 +29,7 @@ class TestRephraseQuestion(unittest.TestCase):
         state = self.kbs._check_query_domain(inputs)
         
         print(f"State: {state}")
-        self.assertEqual(state['generation_score'], expected_classification)
+        self.assertEqual(state['q_domain_relevance'], expected_classification)
     
         
     def test_negative_rephrased_quesiton(self):
@@ -41,7 +41,7 @@ class TestRephraseQuestion(unittest.TestCase):
         inputs = {"question":  state['question'], "domain": self.domain, "execution_path": []}
         state = self.kbs._check_query_domain(inputs)
         print(f"State: {state}")
-        self.assertEqual(state['generation_score'], expected_classification)
+        self.assertEqual(state['q_domain_relevance'], expected_classification)
             
         
     def tearDown(self) -> None:

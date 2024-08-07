@@ -33,11 +33,14 @@ class TestAnswerHallucination(unittest.TestCase):
         provide_classification = 'yes' if len(state['documents']) > 0 else 'no'
         self.assertEqual(provide_classification, retrieve_documents_classification)
         
-        inputs = {"documents": state["documents"], "question": question, "execution_path": []}
+        inputs = {"documents": state["documents"], "question": state["question"], "execution_path": []}
+        state = self.kbs._grade_documents(inputs)
+        
+        inputs = {"grade_documents": state["grade_documents"], "question": question, "execution_path": []}
         state = self.kbs._generate(inputs)
         
         hallucination_classification = state['answer']
-        inputs = {'documents': state['documents'], "answer": state["answer"], "execution_path": []}
+        inputs = {'grade_documents': state['grade_documents'], "answer": state["answer"], "execution_path": []}
         state = self.kbs._hallucination_check(inputs)
         
         print(f"State: {state}")
@@ -54,17 +57,16 @@ class TestAnswerHallucination(unittest.TestCase):
         provide_classification = 'yes' if len(state['documents']) > 0 else 'no'
         self.assertEqual(provide_classification, retrieve_documents_classification)
         
-        inputs = {"documents": state["documents"], "question": state["question"], "execution_path": []}
+        inputs = {"grade_documents": state["documents"], "question": state["question"], "execution_path": []}
         state = self.kbs._generate(inputs)
         
-        inputs = {'documents': state['documents'], "answer": state["answer"], "execution_path": []}
+        inputs = {'grade_documents': state['grade_documents'], "answer": state["answer"], "execution_path": []}
         state = self.kbs._hallucination_check(inputs)
         
         print(f"State: {state}")
         provide_classification = state['hallucination']
         self.assertEqual(provide_classification, hallucination_classification)
 
-        
         
     def tearDown(self) -> None:
         return super().tearDown()

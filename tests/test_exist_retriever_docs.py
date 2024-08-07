@@ -37,7 +37,7 @@ class TestExistRetrieverDocs(unittest.TestCase):
         state = self.kbs._grade_documents(inputs)
         
         print(f"State: {state}")
-        provide_classification = 'yes' if len(state['documents']) > 0 else 'no'
+        provide_classification = 'yes' if len(state['grade_documents']) > 0 else 'no'
         self.assertEqual(provide_classification, grade_documents_classification)
     
     def  test_positive_retrive_negative_grade_docs(self):
@@ -54,7 +54,7 @@ class TestExistRetrieverDocs(unittest.TestCase):
         state = self.kbs._grade_documents(inputs)
         
         print(f"State: {state}")
-        provide_classification = 'yes' if len(state['documents']) > 0 else 'no'
+        provide_classification = 'yes' if len(state['grade_documents']) > 0 else 'no'
         self.assertEqual(provide_classification, grade_documents_classification)
     
     def  test_negative_retrive_negative_grade_docs(self):
