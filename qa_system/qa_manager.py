@@ -192,8 +192,8 @@ class KnowledgeBaseSystem:
         state['execution_path'].extend(["generate"])
         
         print("\nQuestion:                {}".format(state["question"]))
-        
-        generation = self.generate_answer.invoke({"context": state["documents"], "question": state["question"], "chat_history": self.chat_history})
+        print("\nContext:                 {}".format(state["grade_documents"]))
+        generation = self.generate_answer.invoke({"context": state["grade_documents"], "question": state["question"], "chat_history": self.chat_history})
         print("\nAnswer:                 {}".format(generation))
         
         state ["answer"] = generation
@@ -237,9 +237,17 @@ class KnowledgeBaseSystem:
         print("\nQuestion:                {}".format(state["question"]))
         
         generation = self.chain_math.invoke({"question": state["question"], "documents": state["grade_documents"]})
-        steps_str = [f"Step {i+1}: {step}" for i, step in enumerate(generation['step-wise reasoning'])]
-        stepwise_str = "Solution:\n\n" + "\n".join(steps_str).replace('*', '\\*')
-        expr_str = generation['expr'].replace('*', '\\*')
+        
+        # Initialize stepwise_str and expr_str with default values
+        stepwise_str = "Solution:\n\nNo step-wise reasoning available."
+        expr_str = "No expression available."
+        
+        if 'step-wise reasoning' in generation:
+            steps_str = [f"Step {i+1}: {step}" for i, step in enumerate(generation['step-wise reasoning'])]
+            stepwise_str = "Solution:\n\n" + "\n".join(steps_str).replace('*', '\\*')
+        
+        if 'expr' in generation:
+            expr_str = generation['expr'].replace('*', '\\*')
         
         try:
             state['answer'] = {"answer": f"{stepwise_str}\n\n Final answer: {expr_str} = {ne.evaluate(generation['expr'])}", "metadata": "Computed with python"}
@@ -317,7 +325,7 @@ class KnowledgeBaseSystem:
         print("Anser Check Score:      {}".format(score["score"]))
 
         state["answer_useful"] = "useful" if score["score"] == "yes" else "not useful"
-        print(f"\nDECISION: generation {'addresses' if score["score"] == 'yes' else 'does not address'} question")
+        print(f"\nDECISION: generation {'addresses' if score['score'] == 'yes' else 'does not address'} question")
         if score["score"] == "no":
             state["answer"] = {'answer': "I don't know the answer to that question.", 'metadata': "No metadata"} 
             

@@ -11,7 +11,7 @@ query_domain_check =PromptTemplate(
     Provide the binary score as a JSON with a single key 'score' and no premable or explanation.
     <|eot_id|><|start_header_id|>user<|end_header_id|>
     Here is the user question: {question} \n 
-    Answer: <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+    <|eot_id|><|start_header_id|>assistant<|end_header_id|>
     """,
     input_variables=["question", "domain"],
 )
