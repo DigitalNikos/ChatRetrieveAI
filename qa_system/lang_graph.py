@@ -45,7 +45,7 @@ class WorkflowInitializer:
         workflow.add_edge("retrieve", "grade_docs")
         workflow.add_conditional_edges(
             "grade_docs",
-            lambda state: "yes" if state["documents"] else "no",
+            lambda state: "yes" if state["grade_documents"] else "no",
             {
                 "yes": "question_classification",
                 "no": "ddg_search",
@@ -55,7 +55,7 @@ class WorkflowInitializer:
         workflow.add_edge("ddg_search", "grade_ddg_docs")
         workflow.add_conditional_edges(
             "grade_ddg_docs",
-            lambda state: "yes" if state["documents"] else "no",
+            lambda state: "yes" if state["grade_documents"] else "no",
             {
                 "yes": "question_classification",
                 "no": END,
