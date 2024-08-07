@@ -1,3 +1,4 @@
+import numexpr as ne
 from langchain_community.chat_models import ChatOllama
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.messages import HumanMessage, AIMessage
@@ -14,7 +15,7 @@ from qa_system.prompts import (generate_answer_propmpt,rephrase_prompt,
                      grader_document_prompt, hallucination_grader_prompt, 
                      answers_grader_prompt, query_domain_check, question_classifier_prompt,math_solver)
 
-import numexpr as ne
+
 
 
 class KnowledgeBaseSystem:
@@ -27,13 +28,16 @@ class KnowledgeBaseSystem:
         print('\n--- GRAPH STATE ---')
         question: str
         rephrase_question: str
-        answer: str
+        q_domain_relevance: str
         documents: List[str]
+        grade_documents: List[str]
         domain : str
         hallucination: str
         generation_score: str
         question_type: str
         execution_path: List[str] = []
+        answer_useful: str
+        answer: str
 
     def __init__(self, general_llm_model_name: str, math_llm_model_name: str, retriever = None, temperature=0):  
         print('\nknowledge_base_system.py - __init__()')    
@@ -71,25 +75,23 @@ class KnowledgeBaseSystem:
             str: 'yes' query within the domain, otherwise 'no'.
         """
         print("\n--- CHECK QUERY DOMAIN ---")
+        
         state['execution_path'].extend(["check_query_domain"])
         
-        question = state["question"]
-        domain = state["domain"]
-        print("\nQuestion:  {}".format(question))
-        print("\nDomain:    {}".format(domain))
+        print("\nQuestion:  {}".format(state["question"]))
+        print("\nDomain:    {}".format(state["domain"]))
 
-        answer = self.query_domain_check.invoke({"question": question, "domain": domain})
+        answer = self.query_domain_check.invoke({"question": state["question"], "domain": state["domain"]})
         print("\nAnswer:    {}".format(answer))
         
-        state['generation_score'] = answer['score']
-        state['generation_score'] = 'yes'
-        state['answer'] = {"answer": "I don't know the answer to that question.", "metadata": "No metadata"}
+        state['q_domain_relevance'] = answer['score']
+        state['answer'] = {'answer': "I don't know the answer to that question.", 'metadata': "No metadata"}
         return state
     
     
     def _rephrase_query(self, state: GraphState):
         """
-        Transform the query to produce a better question.
+        Transform the query based on the existing "chat_rephrased_history".
         
         Args:
             state (dict): The current graph state
@@ -98,13 +100,15 @@ class KnowledgeBaseSystem:
             state (dict): Updates 'question' key with a re-phrased question
         """
         print("\n--- REPHRASE QUERY ---")
+        
         state['execution_path'].extend(["rephrase_based_history"])
+        
         print("\nQuestion:         {}".format(state["question"]))
         
         chat_history_content = extract_limited_chat_history(self.chat_rephrased_history, max_length=3500)
         rephrased_query = self.rephrase_query_chain.invoke({"input": state["question"], "chat_history": chat_history_content})
-        
         print("\nRephrased query:  {}".format(rephrased_query))
+        
         state["question"] = rephrased_query['question']
         return state
    
@@ -120,19 +124,56 @@ class KnowledgeBaseSystem:
              GraphState: Updated state with 'documents' containing retrieved documents or an empty list if no retriever is available.
         """
         print("\n--- RETRIEVE DOCUMENTS ---")
+        
         state['execution_path'].extend(["retrieve"])
         
-        if self.retriever is None: # or raise error
+        print("\nQuestion to retrive:    {}".format(state["question"]))
+        
+        if self.retriever is None: 
             print("\nNo files or URLs uploaded. Returning empty documents.")
             state["documents"] = []
             return state
         
-        print("\nQuestion to retrive:    {}".format(state["question"]))
-
         chat_retriever_chain = create_history_aware_retriever(self.json_llm, self.retriever, rephrase_prompt)
-        documents = chat_retriever_chain.invoke({"input": state["question"], "chat_history": self.chat_history})
-        state['documents'] = documents 
+        documents = chat_retriever_chain.invoke({"input": state["question"], "chat_history": self.chat_history}) 
         print("\nRetrieved Documents:    {}".format(documents))
+        
+        state['documents'] = documents
+        return state
+    
+    
+    def _grade_documents(self, state: GraphState):
+        """
+        Determines whether the retrieved documents are relevant to the question.
+        
+        Args:
+            state (dict): The current graph state
+            
+        Returns:
+            dict: Updated state with 'documents' key containing only relevant documents.
+        """
+        print("\n--- GRADE RETRIEVED DOCUMENTS---")
+        
+        state['execution_path'].extend(["grade_docs"])
+        documents = state["documents"]
+        num_documents = len(documents)
+        
+        print("\nNumber of documents:  {}".format(num_documents))
+        
+        filtered_docs = []
+        with tqdm(total=num_documents, desc="Grading Documents", ncols=100) as pbar:
+            for d in documents:
+                score = self.retrieval_grader_document_chain.invoke({"question": state["question"], "document": d.page_content})
+                grade = score["score"]
+                if grade == "yes":
+                    filtered_docs.append(d)
+                else:
+                    continue
+                pbar.update(1)
+        
+        print("\nRelevant documents:   {}/{}".format(len(filtered_docs), num_documents))
+        
+        state["grade_documents"] = filtered_docs
         return state
     
 
@@ -147,47 +188,17 @@ class KnowledgeBaseSystem:
             dict: Updated state with a new key 'generation' containing the LLM generation.
         """
         print("\n--- GENERATE ANSWER ---")
-        print("\nQuestion:                {}".format(state["question"]))
+        
         state['execution_path'].extend(["generate"])
         
+        print("\nQuestion:                {}".format(state["question"]))
+        
         generation = self.generate_answer.invoke({"context": state["documents"], "question": state["question"], "chat_history": self.chat_history})
-        
         print("\nAnswer:                 {}".format(generation))
-
-        return {"documents": state["documents"], "question": state["question"], "answer": generation}
-
-
-    def _grade_documents(self, state: GraphState):
-        """
-        Determines whether the retrieved documents are relevant to the question.
         
-        Args:
-            state (dict): The current graph state
-            
-        Returns:
-            dict: Updated state with 'documents' key containing only relevant documents.
-        """
-        print("\n--- GRADE RETRIEVED DOCUMENTS---")
-        state['execution_path'].extend(["grade_docs"])
-        
-        documents = state["documents"]
-        num_documents = len(documents)
-        
-        print("\nNumber of documents:  {}".format(num_documents))
-        filtered_docs = []
-        with tqdm(total=num_documents, desc="Grading Documents", ncols=100) as pbar:
-            for d in documents:
-                score = self.retrieval_grader_document_chain.invoke({"question": state["question"], "document": d.page_content})
-                grade = score["score"]
-                if grade == "yes":
-                    filtered_docs.append(d)
-                else:
-                    continue
-                pbar.update(1)
-        
-        print("\nRelevant documents:   {}/{}".format(len(filtered_docs), num_documents))
-        state["documents"] = filtered_docs
+        state ["answer"] = generation
         return state
+
     
     def _question_classifier(self, state: GraphState):
         """
@@ -200,12 +211,13 @@ class KnowledgeBaseSystem:
             dict: Updated state with 'question_type' key containing the classification.
         """
         print("\n--- QUESTION CLASSIFIER ---")
+        
         state['execution_path'].extend(["question_classification"])
         
-        question = state["question"]
-        question_type = self.question_classifier.invoke({"question": question})
+        question_type = self.question_classifier.invoke({"question": state["question"]})
+        print("\nQuestion Type:  {}".format(question_type))
+        
         state["question_type"] = question_type['score']
-        print("\nQuestion Type:  {}".format(state["question_type"]))
         return state
     
 
@@ -220,13 +232,15 @@ class KnowledgeBaseSystem:
             dict: Updated state with a new key 'generation' containing the LLM generation.
         """
         print("\n--- GENERATE MATH ANSWER ---")
-        print("\nQuestion:                {}".format(state["question"]))
-        state['execution_path'].extend(["math_generate"])
         
-        generation = self.chain_math.invoke({"question": state["question"], "documents": state["documents"]})
+        state['execution_path'].extend(["math_generate"])
+        print("\nQuestion:                {}".format(state["question"]))
+        
+        generation = self.chain_math.invoke({"question": state["question"], "documents": state["grade_documents"]})
         steps_str = [f"Step {i+1}: {step}" for i, step in enumerate(generation['step-wise reasoning'])]
         stepwise_str = "Solution:\n\n" + "\n".join(steps_str).replace('*', '\\*')
         expr_str = generation['expr'].replace('*', '\\*')
+        
         try:
             state['answer'] = {"answer": f"{stepwise_str}\n\n Final answer: {expr_str} = {ne.evaluate(generation['expr'])}", "metadata": "Computed with python"}
             state['generation_score'] = "yes"
@@ -237,6 +251,7 @@ class KnowledgeBaseSystem:
         print("\nAnswer:                 {}".format(state['answer']))
 
         return state
+
 
     def _ddg_search(self, state: GraphState):
         """
@@ -249,11 +264,12 @@ class KnowledgeBaseSystem:
             state (dict): Updates state with retrieved documents
         """
         print("\n--- DDG SEARCH ---")
+        
         state['execution_path'].extend(["ddg_search"])
         
         documents = self.search_ddg_search_results.invoke({"query": state["question"]})
         documents = convert_str_to_document(documents)
-        print("Documents DDG: ", documents)
+        print("\nDocuments DDG:         {}".format(documents))
         
         state["documents"] = documents
         return state
@@ -270,15 +286,14 @@ class KnowledgeBaseSystem:
             str: Decision for next node to call
         """
         print("\n--- HALLUCINATIONS CHECK ---")
+        
         state['execution_path'].extend(["hallucination_check"])
         
-        documents = state["documents"]
-        generation = state["answer"]
-        score = self.hallucination_grader_chain.invoke({"documents": documents, "generation": generation}) 
+        score = self.hallucination_grader_chain.invoke({"documents":  state["grade_documents"], "generation": state["answer"]}) 
         state["hallucination"] = "no" if score["score"] == "yes" else "yes"
         print(f"\nDECISION: generation is {'grounded in documents' if score['score'] == 'yes' else 'not grounded in documents, re-try'}")
+        
         if score == "yes":
-            print("SCORE: ", score)
             state["answer"] = {'answer': "I don't know the answer to that question.", 'metadata': "No metadata"} 
             
         return state
@@ -295,40 +310,38 @@ class KnowledgeBaseSystem:
             dict: Updated state with answer check result
         """
         print("\n--- FINAL ANSWER CHECK ---")
+        
         state['execution_path'].extend(["answer_check"])
-        
-        question = state["question"]
-        generation = state["answer"]
 
-        score = self.answer_grader_chain.invoke({"question": question, "generation": generation})
-        grade = score["score"]
-        
-        print("Anser Check Score:      {}".format(grade))
+        score = self.answer_grader_chain.invoke({"question": state["question"], "generation": state["answer"]})
+        print("Anser Check Score:      {}".format(score["score"]))
 
-        state["score"] = "useful" if grade == "yes" else "not useful"
-        print(f"\nDECISION: generation {'addresses' if grade == 'yes' else 'does not address'} question")
-        if grade == "no":
+        state["answer_useful"] = "useful" if score["score"] == "yes" else "not useful"
+        print(f"\nDECISION: generation {'addresses' if score["score"] == 'yes' else 'does not address'} question")
+        if score["score"] == "no":
             state["answer"] = {'answer': "I don't know the answer to that question.", 'metadata': "No metadata"} 
+            
         return state
     
 
     def invoke(self, inputs):
-        print(f"inputs: {inputs}")
-        print('\nCalling => knowledge_base_system.py - invoke()')
+        print("\n--- INOVKE START ---")
+        print("\nInputs:      {}".format(inputs))
+        
         inputs['execution_path'] = []
                 
         try:
             answer = self.app.invoke(inputs)
             print("\n--- INOVKE ANSWER ---")
-            print("\nAnswer:  {}".format(answer['answer']))
+            print("\nAnswer:      {}".format(answer))
         except Exception as e:
+            print("\nException:   {}".format(e))            
             answer = {"answer": "I don't know the answer to that question", "metadata": "No metadata"}
         
         self.chat_history.extend([HumanMessage(content=inputs['question']), AIMessage(content=answer['answer']['answer'])])
-        self.chat_rephrased_history.extend([HumanMessage(content=answer['question']), AIMessage(content=answer['answer']['answer'])])
-        for message in self.chat_history:
-            print("\nChat History:  {}".format(message))
+        self.chat_rephrased_history.extend([HumanMessage(content=answer['question']), AIMessage(content=answer['answer']['answer'])])   
         return answer
+    
     
     def set_retriever(self, retriever):
         self.retriever = retriever
