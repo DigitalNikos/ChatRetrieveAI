@@ -106,7 +106,7 @@ generate_answer_propmpt = PromptTemplate(
         Also i will provide you the chat history. If it is empty, you can ignore it. if it is not empty, you can use it to answer the question.
         If you don't know the answer, just say that you don't know. 
         return a JSON with the key 'answer' and 'metadata', metadata should reference the metadata from used Document objects. 
-        <|eot_id|><|start_header_id|>user<|end_header_id|>
+        <|begin_of_text|><|start_header_id|>system<|end_header_id|>
         Context: {context} 
         
         Chat History: {chat_history}
@@ -147,7 +147,7 @@ answers_grader_prompt = PromptTemplate(
 )
 
 math_solver = PromptTemplate(
-    template="""
+    template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
     You are an expert AI specialized in generating expressions for ne.evaluate(.) to solve arithmetic tasks.
 
     Given specific numbers, write a NumExpr-compatible expression that directly calculates the result. The final expression must contain only numbers and operators, with no variables. Provide the output as a JSON object with 'step-wise reasoning' and 'expr'.
@@ -168,10 +168,10 @@ math_solver = PromptTemplate(
     'expr': '20 - (3 * 2 + 2 * 3 + 2 * 1.5 + 2 * 1)'
     }}
     
-    Your task:
+    <|begin_of_text|><|start_header_id|>system<|end_header_id|>
     Related Documents: {documents}\n
     Task: {question} \n 
-    Answer:""",
+     <|eot_id|><|start_header_id|>assistant<|end_header_id|>""",
     input_variables=["question", "documents"],
 )
 

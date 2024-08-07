@@ -81,7 +81,8 @@ class KnowledgeBaseSystem:
         answer = self.query_domain_check.invoke({"question": question, "domain": domain})
         print("\nAnswer:    {}".format(answer))
         
-        state['generation_score'] = answer['score']  
+        state['generation_score'] = answer['score']
+        state['generation_score'] = 'yes'
         state['answer'] = {"answer": "I don't know the answer to that question.", "metadata": "No metadata"}
         return state
     
@@ -224,8 +225,8 @@ class KnowledgeBaseSystem:
         
         generation = self.chain_math.invoke({"question": state["question"], "documents": state["documents"]})
         steps_str = [f"Step {i+1}: {step}" for i, step in enumerate(generation['step-wise reasoning'])]
-        stepwise_str = "Solution:\n\n" + "\n".join(steps_str).replace('*', '\*')
-        expr_str = generation['expr'].replace('*', '\*')
+        stepwise_str = "Solution:\n\n" + "\n".join(steps_str).replace('*', '\\*')
+        expr_str = generation['expr'].replace('*', '\\*')
         try:
             state['answer'] = {"answer": f"{stepwise_str}\n\n Final answer: {expr_str} = {ne.evaluate(generation['expr'])}", "metadata": "Computed with python"}
             state['generation_score'] = "yes"
@@ -277,6 +278,7 @@ class KnowledgeBaseSystem:
         state["hallucination"] = "no" if score["score"] == "yes" else "yes"
         print(f"\nDECISION: generation is {'grounded in documents' if score['score'] == 'yes' else 'not grounded in documents, re-try'}")
         if score == "yes":
+            print("SCORE: ", score)
             state["answer"] = {'answer': "I don't know the answer to that question.", 'metadata': "No metadata"} 
             
         return state

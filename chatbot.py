@@ -4,7 +4,7 @@ from config import Config as cfg
 from langchain_core.documents import Document
 from streamlit_chat import message
 
-from extract_source import upload_pdf, upload_url
+# from extract_source import upload_pdf, upload_url
 from rag.rag import ChatPDF
 
 
