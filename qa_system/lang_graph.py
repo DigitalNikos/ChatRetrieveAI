@@ -25,7 +25,7 @@ class WorkflowInitializer:
         
         workflow.add_conditional_edges(
             "check_query_domain",
-            lambda state: state["generation_score"],
+            lambda state: state["q_domain_relevance"],
             {
                 "yes": "retrieve",
                 "no": "rephrase_based_history",
@@ -35,7 +35,7 @@ class WorkflowInitializer:
         workflow.add_edge("rephrase_based_history", "check_query_domain_end")
         workflow.add_conditional_edges(
             "check_query_domain_end",
-            lambda state: state["generation_score"],
+            lambda state: state["q_domain_relevance"],
             {
                 "yes": "retrieve",
                 "no": END,
@@ -92,7 +92,7 @@ class WorkflowInitializer:
         
         workflow.add_conditional_edges(
             "answer_check",
-            lambda state: state["score"],
+            lambda state: state["answer_useful"],
             {
                 "useful": END,
                 "not useful": END,
