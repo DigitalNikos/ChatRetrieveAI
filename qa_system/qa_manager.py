@@ -18,6 +18,9 @@ from qa_system.prompts import (generate_answer_propmpt,rephrase_prompt,
 
 
 
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import FlashrankRerank
+
 class KnowledgeBaseSystem:
     print('\n--- KNOWLEDGE BASE SYSTEM ---')
     class GraphState(TypedDict):
@@ -48,12 +51,13 @@ class KnowledgeBaseSystem:
         # LLMs
         self.json_llm = ChatOllama(model=general_llm_model_name, format="json", temperature=temperature) 
         self.math_llm = ChatOllama(model=math_llm_model_name, format="json", temperature=temperature)  
+        self.llm = ChatOllama(model=general_llm_model_name, temperature=temperature) 
         
         # CHAINS
         self.query_domain_check = query_domain_check | self.json_llm | JsonOutputParser()
         self.rephrase_query_chain = rephrase_prompt | self.json_llm | JsonOutputParser()
         self.retrieval_grader_document_chain = grader_document_prompt | self.json_llm | JsonOutputParser()
-        self.generate_answer = generate_answer_propmpt | self.json_llm | JsonOutputParser()
+        self.generate_answer = generate_answer_propmpt | self.llm | JsonOutputParser()
         self.hallucination_grader_chain = hallucination_grader_prompt | self.json_llm | JsonOutputParser()
         self.answer_grader_chain = answers_grader_prompt | self.json_llm | JsonOutputParser()
         self.question_classifier = question_classifier_prompt | self.json_llm | JsonOutputParser()
@@ -76,7 +80,8 @@ class KnowledgeBaseSystem:
         """
         print("\n--- CHECK QUERY DOMAIN ---")
         
-        state['execution_path'].extend(["check_query_domain"])
+        if "execution_path" in state:
+            state['execution_path'].extend(["check_query_domain"])
         
         print("\nQuestion:  {}".format(state["question"]))
         print("\nDomain:    {}".format(state["domain"]))
@@ -101,7 +106,8 @@ class KnowledgeBaseSystem:
         """
         print("\n--- REPHRASE QUERY ---")
         
-        state['execution_path'].extend(["rephrase_based_history"])
+        if "execution_path" in state:
+            state['execution_path'].extend(["rephrase_based_history"])
         
         print("\nQuestion:         {}".format(state["question"]))
         
@@ -125,7 +131,8 @@ class KnowledgeBaseSystem:
         """
         print("\n--- RETRIEVE DOCUMENTS ---")
         
-        state['execution_path'].extend(["retrieve"])
+        if "execution_path" in state:
+            state['execution_path'].extend(["retrieve"])
         
         print("\nQuestion to retrive:    {}".format(state["question"]))
         
@@ -133,12 +140,16 @@ class KnowledgeBaseSystem:
             print("\nNo files or URLs uploaded. Returning empty documents.")
             state["documents"] = []
             return state
+
+        compressor = FlashrankRerank(model="ms-marco-MiniLM-L-12-v2")         
+        compression_retriever = ContextualCompressionRetriever(
+            base_compressor=compressor, base_retriever=self.retriever
+        )
         
-        chat_retriever_chain = create_history_aware_retriever(self.json_llm, self.retriever, rephrase_prompt)
-        documents = chat_retriever_chain.invoke({"input": state["question"], "chat_history": self.chat_history}) 
-        print("\nRetrieved Documents:    {}".format(documents))
+        compressed_docs = compression_retriever.invoke(state["question"] )
+        print("\nRetrieved Documents:    {}".format(compressed_docs))
         
-        state['documents'] = documents
+        state['documents'] = compressed_docs
         return state
     
     
@@ -153,8 +164,9 @@ class KnowledgeBaseSystem:
             dict: Updated state with 'documents' key containing only relevant documents.
         """
         print("\n--- GRADE RETRIEVED DOCUMENTS---")
-        
-        state['execution_path'].extend(["grade_docs"])
+        if "execution_path" in state:
+            state['execution_path'].extend(["grade_docs"])
+            
         documents = state["documents"]
         num_documents = len(documents)
         
@@ -189,11 +201,13 @@ class KnowledgeBaseSystem:
         """
         print("\n--- GENERATE ANSWER ---")
         
-        state['execution_path'].extend(["generate"])
+        if "execution_path" in state:
+            state['execution_path'].extend(["generate"])
         
         print("\nQuestion:                {}".format(state["question"]))
         print("\nContext:                 {}".format(state["grade_documents"]))
-        generation = self.generate_answer.invoke({"context": state["grade_documents"], "question": state["question"], "chat_history": self.chat_history})
+         
+        generation = self.generate_answer.invoke({"context": state['grade_documents'], "question": state["question"], "chat_history": self.chat_history})
         print("\nAnswer:                 {}".format(generation))
         
         state ["answer"] = generation
@@ -212,7 +226,8 @@ class KnowledgeBaseSystem:
         """
         print("\n--- QUESTION CLASSIFIER ---")
         
-        state['execution_path'].extend(["question_classification"])
+        if "execution_path" in state:
+            state['execution_path'].extend(["question_classification"])
         
         question_type = self.question_classifier.invoke({"question": state["question"]})
         print("\nQuestion Type:  {}".format(question_type))
@@ -233,17 +248,21 @@ class KnowledgeBaseSystem:
         """
         print("\n--- GENERATE MATH ANSWER ---")
         
-        state['execution_path'].extend(["math_generate"])
+        if "execution_path" in state:
+            state['execution_path'].extend(["math_generate"])
+            
         print("\nQuestion:                {}".format(state["question"]))
         
         generation = self.chain_math.invoke({"question": state["question"], "documents": state["grade_documents"]})
         
-        # Initialize stepwise_str and expr_str with default values
-        stepwise_str = "Solution:\n\nNo step-wise reasoning available."
-        expr_str = "No expression available."
+        stepwise_str = generation['step-wise reasoning'] if 'step-wise reasoning' in generation else "No step-wise reasoning available."
+        expr_str = generation['expr'] if 'expr' in generation else "No expression available."
         
+        print("\nGeneration:             {}".format(generation))
+        print("\nGeneration:             {}".format(generation['expr']))
+            
         if 'step-wise reasoning' in generation:
-            steps_str = [f"Step {i+1}: {step}" for i, step in enumerate(generation['step-wise reasoning'])]
+            steps_str = [f"Step {i+1}: {step}\n" for i, step in enumerate(generation['step-wise reasoning'])]
             stepwise_str = "Solution:\n\n" + "\n".join(steps_str).replace('*', '\\*')
         
         if 'expr' in generation:
@@ -295,7 +314,8 @@ class KnowledgeBaseSystem:
         """
         print("\n--- HALLUCINATIONS CHECK ---")
         
-        state['execution_path'].extend(["hallucination_check"])
+        if "execution_path" in state:
+            state['execution_path'].extend(["hallucination_check"])
         
         score = self.hallucination_grader_chain.invoke({"documents":  state["grade_documents"], "generation": state["answer"]}) 
         state["hallucination"] = "no" if score["score"] == "yes" else "yes"
@@ -319,7 +339,8 @@ class KnowledgeBaseSystem:
         """
         print("\n--- FINAL ANSWER CHECK ---")
         
-        state['execution_path'].extend(["answer_check"])
+        if "execution_path" in state:
+            state['execution_path'].extend(["answer_check"])
 
         score = self.answer_grader_chain.invoke({"question": state["question"], "generation": state["answer"]})
         print("Anser Check Score:      {}".format(score["score"]))
