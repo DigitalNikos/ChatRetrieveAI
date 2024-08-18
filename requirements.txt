@@ -18,3 +18,5 @@ pyppeteer
 numexpr
 tqdm
 pytest
+pymupdf
+flashrank  
