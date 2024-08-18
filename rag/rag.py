@@ -9,6 +9,7 @@ from utils import clean_text, normalize_documents, format_final_answer
 from qa_system.qa_manager import KnowledgeBaseSystem
 from rag.rag_prompts import domain_detection, domain_check
 
+from langchain.output_parsers import ResponseSchema, StructuredOutputParser
 
 class ChatPDF:
     print("Calling =>rag.py - ChatPDF")
@@ -42,27 +43,42 @@ class ChatPDF:
             docs = self.cfg.LOADERS_TYPES[source_extension](sources["url"]).load()
         else:
             docs = self.cfg.LOADERS_TYPES[source_extension](sources["file_path"]).load()
-            print("Docs: ", docs)
+            
 
         self.text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
             chunk_size=self.cfg.SPLITTER_CHUNK_SIZE, chunk_overlap=self.cfg.SPLITTER_CHUNK_OVERLAP
         )
-
+        
         chunks = self.text_splitter.split_documents(docs)
         chunks = filter_complex_metadata(chunks)
         chunks = clean_text(chunks, sources['file_name'])
         chunks = normalize_documents(chunks)
 
+        print("Summart Domain Chain: ", self.summary_domain_chain)
         print("\nChunks Before update:     ", chunks)
-
-        result = self.summary_domain_chain.invoke({"documents": chunks})
         
+        response_schemas = [
+            ResponseSchema(
+                name="summary", 
+                description="Summary of the documents."),
+            ResponseSchema(
+                name="domain",
+                description="List of possible domains the documents could belong to.",
+                type="list",
+            ),
+        ]
+        
+        output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
+        format_instructions = output_parser.get_format_instructions()
+        
+
+        result = self.summary_domain_chain.invoke({"documents": chunks, "format_instructions" : format_instructions})
         print("\nResult data domain detection: ")
+        print("Result:     ", result)
         print("Summary:    {}".format(result["summary"]))
         print("Domain:     {}".format(result["domain"]))
         
         result = self.domain_checking.invoke({"domain": sources['domain'], "summary": result["summary"], "doc_domain": result["domain"]})  
-
         print("Result for summary: ", result)
         
         if result["score"] == "no":
@@ -79,6 +95,7 @@ class ChatPDF:
         print("Calling =>rag.py - ask()")
         if self.domain is None:
             return "Please set the domain before asking questions."
+        
         state = self.invoke({"question": query, "domain": self.domain})
         print("State: ", state)
         result = format_final_answer(state)

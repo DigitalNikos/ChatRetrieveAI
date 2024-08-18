@@ -1,4 +1,5 @@
 from langchain.prompts import PromptTemplate
+from langchain.output_parsers import ResponseSchema, StructuredOutputParser
 
 domain_check = PromptTemplate(
     template="""
@@ -16,13 +17,18 @@ domain_check = PromptTemplate(
 )
 
 domain_detection = PromptTemplate(
-    template="""You are a grader assessing the summarization and domain of a set of documents.\n
+    template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+    You are a grader assessing the summarization and domain of a set of documents.
     Here are the documents:
     \n ------- \n
     {documents}
     \n ------- \n
-    First, provide a summary of the documents. Then, indicate the domain the documents belong to (e.g., sports, movies, tech).\n
-    Provide the summary and domain as a JSON object with keys 'summary' and 'domain' respectively, and no preamble or explanation. Not a List but JSON object always.
+    First, provide a summary of the documents. 
+    Then, indicate three possible domains the documents could belong(e.g., sports, movies, technology).
+    {format_instructions}
+    <|eot_id|><|start_header_id|>assistant<|end_header_id|>
     """,
-    input_variables=["documents"],
+    input_variables=["documents","format_instructions"],
 )
+
+#TODO try in one prompt
