@@ -1,82 +1,85 @@
-from langchain_core.documents import Document
-from langchain_core.messages import HumanMessage, AIMessage
 import re
 from urllib.parse import urlparse
+from langchain_core.documents import Document
+from langchain_core.messages import HumanMessage, AIMessage
+
+def print_documents(documents):
+    """
+    Prints the documents with formatted metadata and content for better readability.
+    
+    Args:
+        documents (list): List of Document objects with metadata and page content.
+    """
+    for i, doc in enumerate(documents):
+        print(f"\n--- Document {i+1} ---")
+        
+        if doc.metadata:
+            print("Source:", doc.metadata.get('source', 'Unknown Source'))
+        
+        if doc.page_content:
+            print("\nContent Preview:\n")
+            print(doc.page_content[:100] + ('...' if len(doc.page_content) > 100 else ''))
+        
+        print("\n" + "-"*40 + "\n")
+
 
 def clean_text(chunks, file_name: str):
-    print("Calling =>clean_text.py - clean_text()")
+    """
+    Cleans the text in the documents by removing newline characters and extra spaces.
+
+    Returns:
+        list: List of Document objects with cleaned text.
+    """
+    print("text_doc_processing.py - clean_text()")
     
     for chunk in chunks:
-        # Remove newline characters
         chunk.page_content = chunk.page_content.replace('\n', ' ')
-        
-        # Replace multiple spaces with a single space 
         chunk.page_content = re.sub(r'\s+', ' ', chunk.page_content).strip()
-        
         chunk.metadata['source'] = file_name
-
-    
+        
     return chunks
 
-def format_rag_output(rag_output):
-    answer = rag_output.get('answer', 'No answer found.')
-    metadata = rag_output.get('metadata', {})
-    sources = set()
 
-    if isinstance(metadata, dict):
-        if 'sources' in metadata:
-            sources.update(metadata['sources'])
-            
-        if 'source' in metadata:
-            source = metadata['source']
-            page = metadata.get('page')
-            if page:
-                source = f"{source}, page {page}"
-            sources.add(source)
-            
-        if 'link' in metadata:
-            sources.update(metadata['link'])
-            
-    elif isinstance(metadata, list):
-        for item in metadata:
-            sources.add(item['link'])
+def convert_str_to_document(input: str):
+    """
+    Converts the string input to a list of Document objects
 
-    sources_list = ', '.join(sources)
+    Returns:
+        list: List of Document objects
+    """
+    print("text_doc_processing.py - convert_str_to_document()")
     
-    formatted_output = f"Answer: {answer}\nSources: {sources_list}"
-    return formatted_output
+    # Clean the string from the outer square brackets
+    cleaned_string = input.strip("[]")
 
+    # Use regex to split on individual document snippets, titles, and links
+    items = re.findall(r'snippet:\s*(.*?),\s*title:\s*(.*?),\s*link:\s*(https[^\]]+)', cleaned_string, re.DOTALL)
 
-def convert_str_to_document(input:str):
-        cleaned_string = input.strip("[]")
+    documents = []
 
-        # Split into individual items
-        items = re.split(r'\], \[', cleaned_string)
+    for snippet, title, link in items:
+        # Clean up the snippet to remove potential trailing commas or whitespace
+        snippet = snippet.strip().rstrip(",")
+        title = title.strip()
+        link = link.strip()
 
-        
-        documents = []
+        doc = Document(
+            page_content=snippet,
+            metadata={'source': link}
+        )
+        documents.append(doc)
 
-        for item in items:
-            parsed_dict = {}
-            
-            # Find all key-value pairs
-            key_value_pairs = re.findall(r'(\w+):\s([^,]+)', item)
-            
-            for key, value in key_value_pairs:
-                parsed_dict[key] = value.strip()
-            
-            doc = Document(
-                page_content=parsed_dict['snippet'],
-                metadata={
-                    'link': parsed_dict['link']
-                }
-            )
-            
-            documents.append(doc)
-            
-        return documents
+    return documents
+
 
 def normalize_documents(documents):
+    """
+    Normalizes the documents metadata. If PDFs file, extract the page number from the metadata and incrementing it by one.
+
+    Returns:
+        list: List of Document objects with normalized metadata
+    """
+    print("text_doc_processing.py - normalize_documents()")
     normalized_documents = []
 
     for doc in documents:
@@ -91,7 +94,6 @@ def normalize_documents(documents):
         else:
             normalized_source = metadata['source']
         
-        # Construct the normalized document
         normalized_doc = Document(
             metadata={'source': normalized_source},
             page_content=page_content
@@ -101,27 +103,15 @@ def normalize_documents(documents):
     
     return normalized_documents
 
-        
-def format_final_answer(answer):
-    if 'answer' in answer and isinstance(answer['answer'], dict):
-        response = answer['answer'].get('answer', 'No answer provided.')
-        metadata = answer['answer'].get('metadata', 'No metadata available.')
-        source = "No metadata available"
-        # Check if metadata is a string
-        if isinstance(metadata, str):
-            # Attempt to parse the source and page if possible
-            match = re.search(r"source='([^']+)'(?: - page: (\d+))?", metadata)
-            if match:
-                source = match.group(1)
-                
-        
-        return f"{response}\n\nMetadata: {source}"
-    else:
-        return answer.get('answer', 'No answer provided.')
-        
-
 
 def extract_limited_chat_history(chat_rephrased_history, max_length=3500):
+    """
+    Extracts a limited chat history based on the maximum length of the chat messages.
+
+    Returns:
+        list: List of chat messages with a total length less than the specified maximum length.
+    """
+    print("text_doc_processing.py - extract_limited_chat_history()")
 
     current_length = 0
     chat_messages = []
@@ -140,8 +130,17 @@ def extract_limited_chat_history(chat_rephrased_history, max_length=3500):
 
 
 def trim_url_to_domain(original_url):
+    """
+    Trims the original URL to the base domain URL.
+
+    Returns:
+        dict: Dictionary containing the base URL and the original URL.
+    """
+    print("text_doc_processing.py - trim_url_to_domain()")
 
     parsed_url = urlparse(original_url)
     base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-    print(" trim_url_to_domain: ", base_url)
+    
     return {'base_url': base_url, 'original_url': original_url}
+
+

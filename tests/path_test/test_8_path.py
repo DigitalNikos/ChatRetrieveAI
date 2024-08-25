@@ -17,7 +17,7 @@ class TestPath8(unittest.TestCase):
         file_path = os.path.join(test_dir, '..', 'data', 'amazon.pdf')
         source_extension = ".pdf"
         file_name = "amazon.pdf"
-        self.chat_pdf = ChatPDF(cfg)
+        self.chat_pdf = ChatPDF()
         self.chat_pdf.ingest({'file_path': file_path, 'source_extension': source_extension, 'file_name': file_name, 'domain': self.domain})
 
     

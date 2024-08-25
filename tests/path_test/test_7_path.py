@@ -2,7 +2,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 
 import unittest
 from rag.rag import ChatPDF
@@ -18,7 +18,7 @@ class TestPath7(unittest.TestCase):
         file_path = os.path.join(test_dir, '..', 'data', 'amazon.pdf')
         source_extension = ".pdf"
         file_name = "amazon.pdf"
-        self.chat_pdf = ChatPDF(cfg)
+        self.chat_pdf = ChatPDF()
         self.chat_pdf.ingest({'file_path': file_path, 'source_extension': source_extension, 'file_name': file_name, 'domain': self.domain})
 
     

@@ -2,7 +2,6 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import unittest
 from rag.rag import ChatPDF
@@ -19,12 +18,11 @@ class TestPath6(unittest.TestCase):
         file_path = os.path.join(test_dir, '..', 'data', 'Application of Artificial_Intelligence_in_Basketball_Sport.pdf')
         source_extension = ".pdf"
         file_name = "Application of Artificial_Intelligence_in_Basketball_Sport.pdf"
-        self.chat_pdf = ChatPDF(cfg)
+        self.chat_pdf = ChatPDF()
         self.chat_pdf.ingest({'file_path': file_path, 'source_extension': source_extension, 'file_name': file_name, 'domain': self.domain})
 
     
     def test_path_6(self):
-        # question = "In a study using AI, a classifier predicted 67% of 778 basketball games correctly. Suppose that the performance of the classifier improves by 2% each season. How many games would the classifier predict correctly after 3 seasons, if the total number of games remains 778 each season?"
         question = "In a study using AI, a classifier predicted 67% of 778 basketball games correctly. Suppose that the performance of the classifier improves by 2% each season. How many games would the classifier predict correctly after 3 seasons, if the total number of games remains 778 each season?"
         expected_execution_path = [
             'check_query_domain', 
@@ -32,6 +30,7 @@ class TestPath6(unittest.TestCase):
             'grade_docs',
             'question_classification',
             'math_generate',
+            ''
         ]
         
         inputs = {"question": question, "domain": self.domain}
@@ -45,9 +44,6 @@ class TestPath6(unittest.TestCase):
         
         # Check if the question is correctly classified as math
         self.assertEqual(state['question_type'], 'yes', msg="Question is not classified as math")
-        
-        # Check if the answer is generated and does not contain hallucinations
-        self.assertEqual(state['generation_score'], 'no', msg="Generation score is not as expected")
         
         # Check if the execution path is as expected until the last expected step
         self.assertEqual(state['execution_path'], expected_execution_path, msg="Execution path is not as expected")

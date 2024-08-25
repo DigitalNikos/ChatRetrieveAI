@@ -1,12 +1,13 @@
-from langgraph.graph import END, StateGraph, START
+from langgraph.graph import END, StateGraph
 
 class WorkflowInitializer:
 
     def __init__(self, system):
+        print('langgraph.py - __init__()')
         self.system = system
 
     def initialize(self):
-        print('\nCalling => langgraph.py - WorkflowInitializer.initialize()')    
+        print('langgraph.py - initialize()')    
         workflow = StateGraph(self.system.GraphState)
 
         workflow.set_entry_point("check_query_domain")
@@ -68,12 +69,13 @@ class WorkflowInitializer:
             {
                 "yes": "math_generate",
                 "no": "generate",
+                "error": END,
             }
         )
 
         workflow.add_conditional_edges(
             "math_generate",
-            lambda state: state["generation_score"],
+            lambda state: state["math_score"],
             {
                 "no": END,
                 "yes": "answer_check"
@@ -101,6 +103,7 @@ class WorkflowInitializer:
         
         app = workflow.compile()
         
+        # Save the graph image
         try:
             image_data = app.get_graph(xray=True).draw_mermaid_png()
             with open("graph_img/output_image.png", "wb") as file:

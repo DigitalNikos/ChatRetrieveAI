@@ -14,7 +14,7 @@ class TestComputationMethod(unittest.TestCase):
     def setUp(self):
         cfg.MODEL_TEMPERATURE = 0.0
         self.domain = "Sport"
-        chat_pdf = ChatPDF(cfg)
+        chat_pdf = ChatPDF()
         self.kbs = chat_pdf.knowledge_base_system
     
     

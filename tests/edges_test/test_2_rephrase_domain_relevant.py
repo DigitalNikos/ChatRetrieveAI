@@ -15,7 +15,7 @@ class TestRephraseQuestion(unittest.TestCase):
     def setUp(self):
         cfg.MODEL_TEMPERATURE = 0.0
         self.domain = "Sport"
-        self.chat_pdf = ChatPDF(cfg)
+        self.chat_pdf = ChatPDF()
         self.kbs = self.chat_pdf.knowledge_base_system
         self.kbs.chat_rephrased_history.extend([HumanMessage(
                                         content="What is AI's role in predicting basketball game outcomes?"

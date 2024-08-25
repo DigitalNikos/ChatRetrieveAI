@@ -20,7 +20,7 @@ class TestExistRetrieverDocs(unittest.TestCase):
         file_path = os.path.join(test_dir, '..' ,'data', 'Application of Artificial_Intelligence_in_Basketball_Sport.pdf')
         source_extension = ".pdf"
         file_name = "Application of Artificial_Intelligence_in_Basketball_Sport.pdf"
-        self.chat_pdf = ChatPDF(cfg)
+        self.chat_pdf = ChatPDF()
         self.chat_pdf.ingest({'file_path': file_path, 'source_extension': source_extension, 'file_name': file_name, 'domain': self.domain})
         self.kbs = self.chat_pdf.knowledge_base_system
     

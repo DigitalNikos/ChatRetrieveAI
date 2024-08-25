@@ -14,7 +14,7 @@ class TestDomainRelevance(unittest.TestCase):
     def setUp(self):
         cfg.MODEL_TEMPERATURE = 0.0
         self.domain = "Sport"
-        self.chat_pdf = ChatPDF(cfg)
+        self.chat_pdf = ChatPDF()
         self.kbs = self.chat_pdf.knowledge_base_system
     
     

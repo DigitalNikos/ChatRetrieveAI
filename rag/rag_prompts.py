@@ -1,21 +1,38 @@
 from langchain.prompts import PromptTemplate
 from langchain.output_parsers import ResponseSchema, StructuredOutputParser
-
+    
+response_schemas_document_domain_check = [
+            ResponseSchema(
+                name="score", 
+                description="'yes' if the summary and domain fall within the specified user domain, 'no' otherwise."),
+        ]
+output_parser_document_domain_check = StructuredOutputParser.from_response_schemas(response_schemas_document_domain_check)
+format_output_parser_document_domain_check = output_parser_document_domain_check.get_format_instructions()
 domain_check = PromptTemplate(
     template="""
-    You are a grader assessing whether a set of documents falls within a specified domain.\n
-    Here is the specified domain: {domain}
-    Here is the summary of the document:
-    \n ------- \n
-    {summary}
-    \n ------- \n
-    Here is the domain you have identified from the document: {doc_domain}
-    Give a binary 'yes' or 'no' score to indicate whether the documents fall within the specified domain. Not 0 or 1 only yes or no.
-    Provide the binary score as a JSON with a single key 'score' and no preamble or explanation.
+    <|begin_of_text|><|start_header_id|>system<|end_header_id|>
+    Here is the list from 3 domains you have identified from the document: {doc_domain}
+    Here is the summary of the document: {summary}
+    Here is the specified domain from the user: {domain}
+    {format_instructions}
+    <|eot_id|><|start_header_id|>assistant<|end_header_id|>
     """,
     input_variables=["domain", "summary", "doc_domain"],
+    partial_variables={"format_instructions": format_output_parser_document_domain_check},
 )
 
+response_schemas_domain_detection= [
+            ResponseSchema(
+                name="summary", 
+                description="Summary of the documents."),
+            ResponseSchema(
+                name="domain",
+                description="List of possible domains the documents could belong to.",
+                type="list",
+            ),
+        ]
+output_parser_domain_detection = StructuredOutputParser.from_response_schemas(response_schemas_domain_detection)
+format_domain_detection = output_parser_domain_detection.get_format_instructions()
 domain_detection = PromptTemplate(
     template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
     You are a grader assessing the summarization and domain of a set of documents.
@@ -28,7 +45,6 @@ domain_detection = PromptTemplate(
     {format_instructions}
     <|eot_id|><|start_header_id|>assistant<|end_header_id|>
     """,
-    input_variables=["documents","format_instructions"],
+    input_variables=["documents"],
+    partial_variables={"format_instructions": format_domain_detection},
 )
-
-#TODO try in one prompt
