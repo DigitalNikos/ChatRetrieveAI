@@ -59,7 +59,7 @@ class TestAnswerHallucination(unittest.TestCase):
         
     
     def  test_negative_answer_hallucination(self):
-        question = "How do boxers effectively use feints to set up their punches?"
+        question = "What are the long-term psychological impacts of AI-assisted coaching on the decision-making skills of basketball players, particularly in high-stakes scenarios like the NBA playoffs?"
         retrieve_documents_classification = 'yes'
         hallucination_classification = 'yes'
         

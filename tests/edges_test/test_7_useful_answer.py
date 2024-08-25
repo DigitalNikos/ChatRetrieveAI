@@ -12,14 +12,17 @@ from config import Config as cfg
 class TestUsefulAnswer(unittest.TestCase):
     def setUp(self):
         cfg.MODEL_TEMPERATURE = 0.0
-        self.domain = "Sport"
         self.chat_pdf = ChatPDF()
         self.kbs = self.chat_pdf.knowledge_base_system
 
     
     def test_positive_useful_answer(self):
         question = "What are the main applications of AI in improving player performance in basketball?"
-        generation = "AI has several applications in improving player performance in basketball. It is used for performance analysis through wearable devices and video analysis, allowing coaches to develop personalized training programs. AI also helps in injury prevention by analyzing physiological data and predicting potential injuries. Additionally, AI assists in strategic planning by evaluating game data and suggesting optimal strategies."
+        generation = {
+            "answer": {
+                "answer": "AI has several applications in improving player performance in basketball. It is used for performance analysis through wearable devices and video analysis, allowing coaches to develop personalized training programs. AI also helps in injury prevention by analyzing physiological data and predicting potential injuries. Additionally, AI assists in strategic planning by evaluating game data and suggesting optimal strategies."
+            }
+        }
         usuful_answer_classification = 'useful'
         
         inputs = {"question": question, "answer": generation}
@@ -33,8 +36,13 @@ class TestUsefulAnswer(unittest.TestCase):
 
     
     def  test_negative_useful_answer(self):
-        question = "How does AI guarantee that basketball referees make perfect decisions during games?"
-        generation = "Traditional methods used by basketball referees to ensure fair play include consulting a set of ancient basketball scrolls that outline the original rules of the game. Referees are also trained to use divination techniques such as reading tea leaves or using crystal balls to make close-call decisions."
+        question = "What are the benefits of space tourism?"
+        generation ={
+            "answer": {
+                "answer": "The process of photosynthesis allows plants to convert sunlight into energy, which is essential for their growth and oxygen production."
+            }
+        }
+
         usuful_answer_classification = 'not useful'
         
         inputs = {"question": question, "answer": generation}
@@ -50,7 +58,6 @@ class TestUsefulAnswer(unittest.TestCase):
     def tearDown(self) -> None:
         self.chat_pdf = None
         self.kbs = None
-        self.domain = None
         return super().tearDown()
 
 if __name__ == '__main__':

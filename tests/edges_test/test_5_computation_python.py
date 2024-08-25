@@ -29,7 +29,7 @@ class TestComputationMethod(unittest.TestCase):
         print(f"\nMath_gen -> State:      {state}")
         
         self.assertEqual(state['question'], question)
-        self.assertEqual(state['generation_score'], expected_classification)
+        self.assertEqual(state['math_score'], expected_classification)
         
         
     def test_negative__question_classifier(self):
@@ -43,7 +43,7 @@ class TestComputationMethod(unittest.TestCase):
         print(f"\nMath_gen -> State:      {state}")
         
         self.assertEqual(state['question'], question)
-        self.assertEqual(state['generation_score'], expected_classification)
+        self.assertEqual(state['math_score'], expected_classification)
         
         
     def tearDown(self) -> None:
