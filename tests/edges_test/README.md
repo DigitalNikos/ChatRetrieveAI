@@ -1,4 +1,4 @@
-# Unit Tests for Graph Edges in ChatBot
+# Unit Tests for Graph Edges ChatBot
 
 This project contains unit tests for verifying the behavior of different edges in the ChatPDF system. Each edge represents a different type of interaction, such as domain relevance checks, rephrased queries, and document retrieval. These tests ensure that the system correctly handles various scenarios across these edges.
 

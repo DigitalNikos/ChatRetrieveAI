@@ -282,7 +282,6 @@ class KnowledgeBaseSystem:
         except Exception as e:
             try:
                 answer_web = self.chain_math_not_numexpr.invoke({"question": state["question"], "documents": state["grade_documents"]})
-                print("Malakia")
                 print("\nAnswer Web:              {}".format(answer_web))
                 stepwise_str = answer_web.step_wise_reasoning
                 solution = answer_web.solution
@@ -294,7 +293,7 @@ class KnowledgeBaseSystem:
                 steps_str = [f"Step {i+1}: {step}\n" for i, step in enumerate(stepwise_str)]
                 stepwise_str = "🤔 Solution:\n\n" + "\n".join(steps_str)
                 
-                state['math_score'] = "yes"
+                state['math_score'] = "no"
                 state['answer'] = {"answer": f"{stepwise_str}\n\n Final answer: {solution} ", "metadata": sources, "calculation": 'Not python computed or Web based solution, \n maybe not be accurate. (Check the sources)🚨'}
             except Exception as e:
                 state['answer'] = {
@@ -377,6 +376,7 @@ class KnowledgeBaseSystem:
             print("\nAnswer:      {}".format(state["answer"]['answer']))
             
             score = self.answer_grader_chain.invoke({"question": state["question"], "generation": state["answer"]})
+            print("\nScore:      {}".format(score))
             state["answer_useful"] = "useful" if score["score"] == "yes" else "not useful"
             print(f"\nDECISION: generation {'addresses' if score['score'] == 'yes' else 'does not address'} question")
             

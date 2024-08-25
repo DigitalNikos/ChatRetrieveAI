@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 import unittest
 from rag.rag import ChatPDF
 from config import Config as cfg
-from langchain_core.messages import HumanMessage, AIMessage
+
 
 class TestPath6(unittest.TestCase):
     def setUp(self):
@@ -23,14 +23,13 @@ class TestPath6(unittest.TestCase):
 
     
     def test_path_6(self):
-        question = "In a study using AI, a classifier predicted 67% of 778 basketball games correctly. Suppose that the performance of the classifier improves by 2% each season. How many games would the classifier predict correctly after 3 seasons, if the total number of games remains 778 each season?"
+        question = "In a study using AI, a classifier predicted 67% of 778 basketball games correctly. Suppose that the performance of the classifier improves by 2% each season. How many games would the classifier predict correctly after 3 seasons, if the total number of games remains 778 each season? Additionally, model the performance improvement using a derivative to describe how the rate of change in accuracy impacts the classifier’s predictions over time."
         expected_execution_path = [
             'check_query_domain', 
             'retrieve',
             'grade_docs',
             'question_classification',
             'math_generate',
-            ''
         ]
         
         inputs = {"question": question, "domain": self.domain}

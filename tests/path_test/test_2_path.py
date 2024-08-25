@@ -41,7 +41,6 @@ class TestPath2(unittest.TestCase):
             'answer_check',
         ]
         
-        print("MALAKIAAAAAAAAAAAAA:", self.kbs.chat_rephrased_history)
         inputs = {"question": question, "domain": self.domain}
         state = self.chat_pdf.invoke(inputs)
         

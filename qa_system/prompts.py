@@ -129,6 +129,7 @@ answers_grader_prompt = PromptTemplate(
     You are a grader assessing whether an answer is useful to resolve a question.
     Here is the answer: {generation}. 
     Here is the question: {question}
+    <|eot_id|><|begin_of_text|><|start_header_id|>user<|end_header_id|>
     format instructions: {format_instructions}
     <|eot_id|><|start_header_id|>assistant<|end_header_id|>
     """,
