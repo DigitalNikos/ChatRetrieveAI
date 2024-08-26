@@ -35,10 +35,10 @@ ChatRetrieveAI is a chatbot application that uses the Retrieval-Augmented Genera
 1. #### Download Ollama:
    - Visit the Ollama page and download the software:
      [https://ollama.com](https://ollama.com)
-2. #### Pull the Mistral Model:
+2. #### Pull the Llama Model:
    - Open a terminal and pull the llama3 model with the following command:
      ```
-     ollama pull llama3
+     ollama pull llama3.1
      ```
 3. #### Clone the Repository:
    - Clone the project repository from GitHub:
