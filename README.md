@@ -50,7 +50,6 @@ The following diagram provides an overview of the project’s architecture, illu
    - Open a terminal and pull the llama3 model with the following command:
      ```
      ollama pull llama3.1
-     ollama pull llama3.1
      ```
 3. #### Clone the Repository:
    - Clone the project repository from GitHub:
