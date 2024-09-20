@@ -57,6 +57,7 @@ The following diagram provides an overview of the project’s architecture, illu
    ```
    git clone https://github.com/DigitalNikos/ChatRetrieveAI.git
    ```
+   - Navigate into the project directory:
    ```
    cd ChatRetrieveAI
    ```

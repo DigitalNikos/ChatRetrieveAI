@@ -42,21 +42,20 @@ class KnowledgeBaseSystem:
         self.retriever = None
         self.chat_history = []
         self.chat_rephrased_history = []
-        
+  
         # LLMs
         self.json_llm = ChatOllama(model=cfg.MODEL, format=cfg.MODEL_FORMAT, temperature=cfg.MODEL_TEMPERATURE)  
-        self.llm = OllamaFunctions(model=cfg.MODEL, keep_alive=-1, format=cfg.MODEL_FORMAT, temperature=cfg.MODEL_TEMPERATURE) 
-        self.llm_mathematic_resoning = OllamaFunctions(model=cfg.MODEL, keep_alive=cfg.KEEP_IN_MEMORY, format=cfg.MODEL_FORMAT, temperature=cfg.MODEL_TEMPERATURE) 
-        self.llm_mathematic_web_based_resoning = OllamaFunctions(model=cfg.MODEL, keep_alive=cfg.KEEP_IN_MEMORY, format=cfg.MODEL_FORMAT, temperature=cfg.MODEL_TEMPERATURE) 
+        self.llm = OllamaFunctions(model=cfg.MODEL, keep_alive=cfg.KEEP_IN_MEMORY, format=cfg.MODEL_FORMAT, temperature=cfg.MODEL_TEMPERATURE) 
+        
         
         # STRUCTURED LLMs
         self.structured_llm = self.llm.with_structured_output(AnswerWithSources)
-        self.structured_llm_numexpr = self.llm_mathematic_resoning.with_structured_output(AnswerWithSourcesMath)
-        self.structured_llm_not_numexpr = self.llm_mathematic_web_based_resoning.with_structured_output(AnswerWithWebSourcesMath)
+        self.structured_llm_numexpr = self.llm.with_structured_output(AnswerWithSourcesMath)
+        self.structured_llm_not_numexpr = self.llm.with_structured_output(AnswerWithWebSourcesMath)
         
         # CHAINS
         self.generate_answer = generate_answer | self.structured_llm
-        self.query_domain_check = query_domain_check | self.json_llm | JsonOutputParser()
+        self.query_domain_check = query_domain_check | self.json_llm| JsonOutputParser()
         self.rephrase_query_chain = rephrase_prompt | self.json_llm | JsonOutputParser()
         self.retrieval_grader_document_chain = grader_document_prompt | self.json_llm | JsonOutputParser()
         self.hallucination_grader_chain = hallucination_grader_prompt | self.json_llm | JsonOutputParser()
