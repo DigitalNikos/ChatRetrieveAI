@@ -3,18 +3,9 @@ __pycache__/
 
 
 # Environments
-.chat_env
 .env
-.venv
-.chat_fix/
-chat_fix/
-chat_env/
-chat/
 env/
-venv/
 env.bak/
-venv.bak/
-chat_env.bak/
 
 # Testing
 .pytest_cache/
