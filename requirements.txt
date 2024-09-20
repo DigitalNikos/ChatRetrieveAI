@@ -5,7 +5,7 @@ numexpr==2.10.1
 tqdm==4.66.5
 langgraph==0.2.14
 langchain_experimental==0.0.63
-duckduckgo-search==6.2.11
+duckduckgo-search
 fastembed==0.3.2
 pymupdf==1.24.9
 chromadb==0.5.5
