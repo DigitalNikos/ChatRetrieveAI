@@ -5,7 +5,6 @@ class Config:
     print("Calling =>config.py - Config")
     # Model parameters
     MODEL: str = "llama3.1"
-    MATH_MODEL: str = "mathstral"
     MODEL_TEMPERATURE: float = 0.0
     MODEL_FORMAT: str = "json"
     KEEP_IN_MEMORY: int = -1
