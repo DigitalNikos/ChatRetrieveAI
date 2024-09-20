@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 @dataclass
 class Config:
-    print("Calling =>config.py - Config")
     # Model parameters
     MODEL: str = "llama3.1"
     MODEL_TEMPERATURE: float = 0.0
