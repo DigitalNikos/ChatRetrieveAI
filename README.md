@@ -1,27 +1,38 @@
 # ChatRetrieveAI README
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Graph](#graph)
+- [Features](#features)
+- [Getting Started](#getting-started)
+- [Configuration](#configuration)
+
 ## Overview
 
-ChatRetrieveAI is a chatbot application that uses the Retrieval-Augmented Generation (RAG) approach to interact with Documents and external sources like DuckDuckGO.
+ChatRetrieveAI is an advanced chatbot application that leverages the Retrieval-Augmented Generation (RAG) approach to provide accurate, domain-specific responses. By integrating user-uploaded documents and external data sources, such as DuckDuckGo, ChatRetrieveAI tailors its interactions to the chosen domain, ensuring that the information provided is both relevant and precise.
+
+Key features include a user-friendly Streamlit interface, domain-specific conversation capabilities, and transparent metadata display, ensuring users have full visibility into the sources of the information provided.
 
 ## Graph
 
-![Graph](./graph_img/graph.png)
+The following diagram provides an overview of the project’s architecture, illustrating the key components and workflow of ChatRetrieveAI.
+
+![Graph](./graph_img/overview_project.png)
 
 ## Features
 
-✅Streamlit Interface: User-friendly interface built with Streamlit for easy interaction.
+✅ **Streamlit Interface:** A clean and intuitive interface for seamless interaction with the chatbot.
 
-✅ Contextual Chat: Engage in conversations with the chatbot, which uses the content of the uploaded PDFs and  
- additional sources like DuckDuckGO.
+✅ **Contextual Chat:** Maintains conversation context based on uploaded documents and external sources, tailored to the user-selected domain.
 
-✅ Domain: Users are able to choose specific domain for the Chatbot conversation.
+✅ **Domain-Specific Conversations:** Allows users to define a specific domain for more accurate and relevant responses.
 
-✅ Document Ingestion: Upload and ingest documents (.txt .docs .pdf) or URLs to create a searchable knowledge base.
+✅ **Document Ingestion:** Supports uploading and ingesting various document formats (.txt, .docx, .pdf) or URLs to create a searchable knowledge base.
 
-✅ Chat History.
+✅ **Chat History Preservation:** Stores conversation history to maintain context across interactions.
 
-✅ Show metadata to answer(filename, page, url)
+✅ **Metadata Display:** Shows relevant metadata (e.g., filename, page, URL) alongside answers for greater transparency.
 
 ## Getting Started
 
@@ -35,9 +46,10 @@ ChatRetrieveAI is a chatbot application that uses the Retrieval-Augmented Genera
 1. #### Download Ollama:
    - Visit the Ollama page and download the software:
      [https://ollama.com](https://ollama.com)
-2. #### Pull the Llama Model:
+2. #### Pull the Llama3.1 Model:
    - Open a terminal and pull the llama3 model with the following command:
      ```
+     ollama pull llama3.1
      ollama pull llama3.1
      ```
 3. #### Clone the Repository:
@@ -54,11 +66,6 @@ ChatRetrieveAI is a chatbot application that uses the Retrieval-Augmented Genera
    python -m venv env
    ```
 5. #### Activate the Virtual Environment:
-   - On Windows:
-   ```
-   .\env\Scripts\activate
-   ```
-   - On macOS and Linux:
    ```
    source env/bin/activate
    ```
@@ -80,8 +87,12 @@ ChatRetrieveAI is a chatbot application that uses the Retrieval-Augmented Genera
 
 The application settings can be modified in the config.py file. Key settings include:
 
-- MODEL: The language model to use.
-- SPLITTER_CHUNK_SIZE: The chunk size for splitting documents.
-- SPLITTER_CHUNK_OVERLAP: The overlap size for chunks.
-- N_DOCUMENTS_TO_RETRIEVE: Number of documents to retrieve for each query.
-- RETRIEVER_SCORE_THRESHOLD: Threshold score for the retriever.
+- MODEL: Specifies the language model to use for generating responses.
+- SPLITTER_CHUNK_SIZE: Defines the size of text chunks when splitting documents for processing.
+- SPLITTER_CHUNK_OVERLAP: Determines how much overlap there should be between chunks to maintain context.
+- N_DOCUMENTS_TO_RETRIEVE: Sets the number of documents to retrieve per query to ensure relevance.
+- RETRIEVER_SCORE_THRESHOLD: Sets a minimum relevance score for documents to be considered in responses.
+
+## Testing and Compatibility
+
+This project was implemented and tested on a Mac Mini M2 Pro running macOS Sonoma version 14.2.1. Compatibility with other operating systems, including Windows, has not been verified.
