@@ -6,7 +6,7 @@ tqdm
 langgraph
 langchain_experimental
 duckduckgo-search
-fastembed==0.3.2
+langchain_ollama
 pymupdf
 chromadb
 pytest

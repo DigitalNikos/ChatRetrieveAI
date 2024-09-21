@@ -1,6 +1,5 @@
 import chardet
 import time
-# from langchain_ollama.llms import OllamaLLM
 from config import Config as cfg
 from rag.vectordb import VectorDB
 from utils import clean_text, normalize_documents
@@ -10,11 +9,6 @@ from langchain_core.output_parsers import JsonOutputParser
 from rag.rag_prompts import domain_detection, domain_check
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, Docx2txtLoader, WebBaseLoader
-# from langchain.chains.summarize import load_summarize_chain
-# import PyPDF2
-
-# from langchain.chains import AnalyzeDocumentChain
-# import sys, pathlib, pymupdf
 
     
 LOADERS_TYPES = {
@@ -31,7 +25,6 @@ class ChatPDF:
         print("rag.py - ChatPDF - __init__()")
 
         self.json_llm = ChatOllama(model=cfg.MODEL, format= cfg.MODEL_FORMAT, temperature=cfg.MODEL_TEMPERATURE) 
-        # self.llm = OllamaLLM(model=cfg.MODEL, temperature=cfg.MODEL_TEMPERATURE, num_ctx=5000) 
         self.knowledge_base_system = KnowledgeBaseSystem()
         self.vector_db = VectorDB()
         self.domain = None

@@ -2,7 +2,9 @@ from uuid import uuid4
 from typing import List
 from config import Config as cfg
 from langchain_core.documents import Document
-from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+# from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+# from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores.utils import filter_complex_metadata
 from langchain_community.vectorstores import Chroma
 
@@ -11,7 +13,7 @@ class VectorDB:
     def __init__(self):
         print("vectordb.py - __init__()")
         
-        self.embedding = FastEmbedEmbeddings()
+        self.embedding =  OllamaEmbeddings(model="nomic-embed-text")
         self.vector_store = None
 
     def initialize(self, chunks: List[Document]):

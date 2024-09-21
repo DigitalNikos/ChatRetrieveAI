@@ -207,7 +207,10 @@ class KnowledgeBaseSystem:
         
         try:
             generation = self.generate_answer.invoke({"context": state['grade_documents'], "question": state["question"]})
+            print("\nAnswer:                 {}".format(generation))
             metadata = ' '.join(generation.sources)
+            
+            
             
             print("\nAnswer:                 {}".format(generation.answer))
             print("\nMetadata:               {}".format(metadata))
