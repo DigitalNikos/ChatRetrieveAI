@@ -38,7 +38,7 @@ The following diagram provides an overview of the project’s architecture, illu
 
 ### Prerequisites
 
-- Python: Ensure you have Python 3.8 or higher installed.
+- Python: Ensure you have Python 3.12.3 or higher installed.
 - Ollama: Download and install Ollama.
 
 ### Installation and Setup
@@ -92,7 +92,3 @@ The application settings can be modified in the config.py file. Key settings inc
 - SPLITTER_CHUNK_OVERLAP: Determines how much overlap there should be between chunks to maintain context.
 - N_DOCUMENTS_TO_RETRIEVE: Sets the number of documents to retrieve per query to ensure relevance.
 - RETRIEVER_SCORE_THRESHOLD: Sets a minimum relevance score for documents to be considered in responses.
-
-## Testing and Compatibility
-
-This project was implemented and tested on a Mac Mini M2 Pro running macOS Sonoma version 14.2.1. Compatibility with other operating systems, including Windows, has not been verified.
