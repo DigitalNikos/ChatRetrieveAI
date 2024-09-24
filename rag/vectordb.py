@@ -3,10 +3,9 @@ from uuid import uuid4
 
 from config import Config as cfg
 from langchain_community.embeddings import HuggingFaceBgeEmbeddings
-from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_core.documents import Document
 from langchain_milvus import Milvus
-from langchain_ollama import OllamaEmbeddings
+
 
 
 class VectorDB:
@@ -34,8 +33,8 @@ class VectorDB:
         
     def add_documents(self, chunks: List[Document]):
         print("vectordb.py - add_documents()")
+        
         uuids = [str(uuid4()) for _ in range(len(chunks))]
-
         self.vector_store.add_documents(documents=chunks, ids=uuids)
         
 

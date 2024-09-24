@@ -58,7 +58,7 @@ class TestAnswerHallucination(unittest.TestCase):
         
     
     def test_negative_answer_hallucination(self):
-        question = "What are the long-term psychological impacts of AI-assisted coaching on the decision-making skills of basketball players, particularly in high-stakes scenarios like the NBA playoffs?"
+        question = "Can AI-based coaching techniques predict and enhance the mental resilience of NBA players during critical game moments, and what are the long-term effects?"
         retrieve_documents_classification = 'yes'
         hallucination_classification = 'yes'
         

@@ -107,28 +107,20 @@ class ChatPDF:
         if self.domain is None:
             return "Please set the domain before asking questions."
         
-        try:
-            state = self.invoke({"question": query, "domain": self.domain})
-        
-            if state["question_type"] == "yes":
-                response = state["answer"]['answer']
-                metadata = state["answer"]['metadata']
-                calculation = state["answer"]['calculation']
-                return f"{response}\n\nMetadata: {metadata} \n\nCalculation: {calculation}"
-            elif state["question_type"] == "no":                
-                response = state["answer"]['answer']
-                metadata = state["answer"]['metadata']
-                return f"{response}\n\nMetadata: {metadata}"
-            else:
-                return "Question classification failed."
-            
-        except KeyError as e:
-            print(f"KeyError: {e}. The expected structure might be missing or altered.")
-            return "There was an issue retrieving the answer. The response structure might be incorrect."
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-            return "An unexpected error occurred."
-        
+        state = self.invoke({"question": query, "domain": self.domain})
+    
+        if state["question_type"] == "yes":
+            response = state["answer"]['answer']
+            metadata = state["answer"]['metadata']
+            calculation = state["answer"]['calculation']
+            return f"{response}\n\nMetadata: {metadata} \n\nCalculation: {calculation}"
+        elif state["question_type"] == "no":
+            response = state["answer"]['answer']
+            metadata = state["answer"]['metadata']
+            return f"{response}\n\nMetadata: {metadata}"
+        else:
+            return "Question classification failed."
+    
     
     def invoke(self, state):
         print("rag.py - invoke()")

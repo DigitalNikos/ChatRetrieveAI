@@ -14,10 +14,9 @@ from qa_system.prompts import (answers_grader_prompt, generate_answer,
                                hallucination_grader_prompt, math_solver,
                                math_solver_web, query_domain_check,
                                question_classifier_prompt, rephrase_prompt)
-from qa_system.structure_answer import (AnswerWithSources,
+from qa_system.structure_answer import (AnswerHallucination, AnswerWithSources,
                                         AnswerWithSourcesMath,
-                                        AnswerWithWebSourcesMath,
-                                        AnswerHallucination)
+                                        AnswerWithWebSourcesMath)
 from tqdm import tqdm
 from typing_extensions import TypedDict
 from utils import (convert_str_to_document, extract_limited_chat_history,
@@ -63,16 +62,15 @@ class KnowledgeBaseSystem:
         
         # CHAINS
         self.generate_answer = generate_answer | self.structured_llm
+        self.hallucination_grader_chain = hallucination_grader_prompt | self.structured_llm_hallucination
+        self.chain_math_numexpr = math_solver |self.structured_llm_numexpr 
+        self.chain_math_not_numexpr = math_solver_web | self.structured_llm_not_numexpr
         self.query_domain_check = query_domain_check | self.json_llm| JsonOutputParser()
         self.rephrase_query_chain = rephrase_prompt | self.json_llm | JsonOutputParser()
         self.retrieval_grader_document_chain = grader_document_prompt | self.json_llm | JsonOutputParser()
-        # self.hallucination_grader_chain = hallucination_grader_prompt | self.json_llm | JsonOutputParser()
-        self.hallucination_grader_chain = hallucination_grader_prompt | self.structured_llm_hallucination
         self.answer_grader_chain = answers_grader_prompt | self.json_llm | JsonOutputParser()
         self.question_classifier = question_classifier_prompt | self.json_llm | JsonOutputParser()
         self.search_ddg_search_results = DuckDuckGoSearchResults(num_results = cfg.N_DDG_TO_RETRIEVE, verbose = True, keys_to_include=['snippet', 'link'])
-        self.chain_math_numexpr = math_solver |self.structured_llm_numexpr 
-        self.chain_math_not_numexpr = math_solver_web | self.structured_llm_not_numexpr
         
         # GRAPH APP
         self.app = WorkflowInitializer(self).initialize()
@@ -123,7 +121,7 @@ class KnowledgeBaseSystem:
         try:
             chat_history_content = extract_limited_chat_history(self.chat_rephrased_history, max_length=3500)
             rephrased_query = self.rephrase_query_chain.invoke({"input": state["question"], "chat_history": chat_history_content})
-            print("\nRephrased query:  {}".format(rephrased_query))
+            print("\nRephrased query:  {}".format(rephrased_query['question']))
             state["question"] = rephrased_query['question']
         except Exception as e:
             print(f"KeyError: {e}. _rephrase_query() - Response may not contain expected fields.")
@@ -155,7 +153,6 @@ class KnowledgeBaseSystem:
         documents = chat_retriever_chain.invoke({"input": state["question"], "chat_history": self.chat_history})
         
         print("\nRetrieved Documents:    ")
-        print("DOCUMETS: ", documents)
         print_documents(documents)
         
         state['documents'] = documents
@@ -193,7 +190,6 @@ class KnowledgeBaseSystem:
             print(f"KeyError: {e}. _grade_documents() - Response may not contain expected fields.")
             filtered_docs = []
                 
-
         print("\nRelevant document filter:   {}/{}".format(len(filtered_docs), num_documents))
         print("\nFiltered Documents:     ")
         print_documents(filtered_docs)
@@ -220,8 +216,6 @@ class KnowledgeBaseSystem:
             generation = self.generate_answer.invoke({"context": state['grade_documents'], "question": state["question"]})
             print("\nAnswer:                 {}".format(generation))
             metadata = ' '.join(generation.sources)
-            
-            
             
             print("\nAnswer:                 {}".format(generation.answer))
             print("\nMetadata:               {}".format(metadata))
@@ -357,15 +351,15 @@ class KnowledgeBaseSystem:
             state['execution_path'].extend(["hallucination_check"])
         
         try:
-            score = self.hallucination_grader_chain.invoke({"documents":  state["grade_documents"], "generation": state["answer"]}) 
-            print("\nScore:      {}".format(score))
-            print("\nScore:      {}".format(type(score)))
-            state["hallucination"] = "no" if score.score == "yes" else "yes"
+            is_grounded_in_facts = self.hallucination_grader_chain.invoke({"documents":  state["grade_documents"], "generation": state["answer"]}) 
             
-            if score.score == "no":
+            state["hallucination"] = "no" if is_grounded_in_facts.score == "yes" else "yes"
+            print("\nHallucination:      {}".format(state["hallucination"]))
+            
+            if is_grounded_in_facts.score == "no":
                 state["answer"] = {'answer': "I don't know the answer to that question.", 'metadata': "No metadata"}
             
-            print(f"\nDECISION: generation is {'grounded in documents' if score.score == 'yes' else 'not grounded in documents, re-try'}")
+            print(f"\nDECISION: generation is {'grounded in documents' if is_grounded_in_facts.score == 'yes' else 'not grounded in documents, re-try'}")
         except Exception as e:
             print(f"KeyError: {e}. _hallucination_check() - Response may not contain expected fields.")
             state["hallucination"] = "yes"
@@ -417,7 +411,7 @@ class KnowledgeBaseSystem:
         
         # Initialize the inputs with 'execution_path' key for the Unit Test
         inputs['execution_path'] = []
-                
+        inputs['question_type'] = 'error'
         try:
             answer = self.app.invoke(inputs)
         except Exception as e:

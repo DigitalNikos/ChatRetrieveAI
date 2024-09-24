@@ -14,6 +14,7 @@ class TestPath6(unittest.TestCase):
     def setUp(self):
         random.seed(42)
         np.random.seed(42)
+        
         cfg.MODEL_TEMPERATURE = 0.0
         cfg.COLLECTION_NAME = "test_6_path"
         self.domain = "Sport"
@@ -26,7 +27,7 @@ class TestPath6(unittest.TestCase):
 
     
     def test_path_6(self):
-        question = "Evaluate the logarithm of the total revenue of all NBA teams in the 2019/20 season, which is approximately USD 7.92 billion."
+        question = "In a study using AI, a classifier predicted 67% of 778 basketball games correctly. Suppose that the performance of the classifier improves by 2% each season. How many games would the classifier predict correctly after 3 seasons, if the total number of games remains 778 each season? Additionally, model the performance improvement using a derivative to describe how the rate of change in accuracy impacts the classifier's predictions over time."
         expected_execution_path = [
             'check_query_domain', 
             'retrieve',

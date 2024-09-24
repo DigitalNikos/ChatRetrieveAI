@@ -78,7 +78,7 @@ class WorkflowInitializer:
             lambda state: state["math_score"],
             {
                 "no": END,
-                "yes": "answer_check"
+                "yes": "answer_check",
             },
         )
         
