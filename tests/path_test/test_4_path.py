@@ -9,13 +9,10 @@ import unittest
 from config import Config as cfg
 from langchain_core.messages import AIMessage, HumanMessage
 from rag.rag import ChatPDF
-import random
-import numpy as np
+
 
 class TestPath4(unittest.TestCase):
     def setUp(self):
-        random.seed(42)
-        np.random.seed(42)
         cfg.MODEL_TEMPERATURE = 0.0
         self.domain = "Sport"
         test_dir = os.path.dirname(__file__)
@@ -27,7 +24,7 @@ class TestPath4(unittest.TestCase):
 
     
     def test_path_4(self):
-        question = "How has AI been applied in preventing overuse injuries in football players with a focus on athletes under 18 since 2021?"
+        question = "Domain: Sport - What are the key findings of the study on the impact of AI on player nutrition in Sport basketball?"
         expected_execution_path = [
             'check_query_domain', 
             'retrieve',

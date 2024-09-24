@@ -14,7 +14,6 @@ from config import Config as cfg
 class TestAnswerHallucination(unittest.TestCase):
     def setUp(self):
         cfg.MODEL_TEMPERATURE = 0.0
-        
         self.domain = "Sport"
         test_dir = os.path.dirname(__file__)
         file_path = os.path.join(test_dir, '..', 'data', 'Application of Artificial_Intelligence_in_Basketball_Sport.pdf')
@@ -58,7 +57,7 @@ class TestAnswerHallucination(unittest.TestCase):
         
     
     def test_negative_answer_hallucination(self):
-        question = "Can AI-based coaching techniques predict and enhance the mental resilience of NBA players during critical game moments, and what are the long-term effects?"
+        question = "What are the findings from the study conducted in collaboration with NASA on the use of AI to simulate zero-gravity basketball training environments to enhance player performance?"
         retrieve_documents_classification = 'yes'
         hallucination_classification = 'yes'
         

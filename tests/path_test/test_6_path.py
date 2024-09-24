@@ -7,14 +7,10 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import unittest
 from rag.rag import ChatPDF
 from config import Config as cfg
-import random
-import numpy as np
+
 
 class TestPath6(unittest.TestCase):
-    def setUp(self):
-        random.seed(42)
-        np.random.seed(42)
-        
+    def setUp(self):        
         cfg.MODEL_TEMPERATURE = 0.0
         cfg.COLLECTION_NAME = "test_6_path"
         self.domain = "Sport"
@@ -27,7 +23,7 @@ class TestPath6(unittest.TestCase):
 
     
     def test_path_6(self):
-        question = "In a study using AI, a classifier predicted 67% of 778 basketball games correctly. Suppose that the performance of the classifier improves by 2% each season. How many games would the classifier predict correctly after 3 seasons, if the total number of games remains 778 each season? Additionally, model the performance improvement using a derivative to describe how the rate of change in accuracy impacts the classifier's predictions over time."
+        question = "AI models in basketball analytics often use mathematical functions to evaluate player performance over time. Consider the following performance score function P(t):\n\n P(t) = 4t^2 + 3t + 2\n\n where t represents the time in minutes a player has been on the court."
         expected_execution_path = [
             'check_query_domain', 
             'retrieve',

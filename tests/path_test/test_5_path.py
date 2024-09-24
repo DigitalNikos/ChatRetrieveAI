@@ -7,14 +7,10 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import unittest
 from rag.rag import ChatPDF
 from config import Config as cfg
-from langchain_core.messages import HumanMessage, AIMessage
-import random
-import numpy as np
+
 
 class TestPath5(unittest.TestCase):
     def setUp(self):
-        random.seed(42)
-        np.random.seed(42)
         cfg.MODEL_TEMPERATURE = 0.0
         cfg.COLLECTION_NAME = "test_5_path"
         self.domain = "Sport"
