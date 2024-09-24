@@ -2,15 +2,18 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import unittest
 from rag.rag import ChatPDF
 from config import Config as cfg
-
+import random
+import numpy as np
 
 class TestPath6(unittest.TestCase):
     def setUp(self):
-        
+        random.seed(42)
+        np.random.seed(42)
         cfg.MODEL_TEMPERATURE = 0.0
         cfg.COLLECTION_NAME = "test_6_path"
         self.domain = "Sport"
@@ -23,7 +26,7 @@ class TestPath6(unittest.TestCase):
 
     
     def test_path_6(self):
-        question = "In a study using AI, a classifier predicted 67% of 778 basketball games correctly. Suppose that the performance of the classifier improves by 2% each season. How many games would the classifier predict correctly after 3 seasons, if the total number of games remains 778 each season? Additionally, model the performance improvement using a derivative to describe how the rate of change in accuracy impacts the classifier’s predictions over time."
+        question = "Evaluate the logarithm of the total revenue of all NBA teams in the 2019/20 season, which is approximately USD 7.92 billion."
         expected_execution_path = [
             'check_query_domain', 
             'retrieve',

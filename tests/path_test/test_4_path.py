@@ -1,16 +1,21 @@
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import unittest
-from rag.rag import ChatPDF
+
 from config import Config as cfg
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
+from rag.rag import ChatPDF
+import random
+import numpy as np
 
 class TestPath4(unittest.TestCase):
     def setUp(self):
-        print(cfg)
+        random.seed(42)
+        np.random.seed(42)
         cfg.MODEL_TEMPERATURE = 0.0
         self.domain = "Sport"
         test_dir = os.path.dirname(__file__)
@@ -22,7 +27,7 @@ class TestPath4(unittest.TestCase):
 
     
     def test_path_4(self):
-        question = " How has AI been applied in preventing overuse injuries in basketball players with a focus on athletes under 18 since 2021?"
+        question = "How has AI been applied in preventing overuse injuries in football players with a focus on athletes under 18 since 2021?"
         expected_execution_path = [
             'check_query_domain', 
             'retrieve',

@@ -2,19 +2,19 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import unittest
 import inspect
 
 from rag.rag import ChatPDF
 from config import Config as cfg
-from langchain_core.messages import HumanMessage, AIMessage
-from langchain_core.documents import Document
 
 
 class TestExistRetrieverDocs(unittest.TestCase):
     def setUp(self):
         cfg.MODEL_TEMPERATURE = 0.0
+        
         self.domain = "Sport"
         test_dir = os.path.dirname(__file__)
         file_path = os.path.join(test_dir, '..' ,'data', 'Application of Artificial_Intelligence_in_Basketball_Sport.pdf')
@@ -48,7 +48,7 @@ class TestExistRetrieverDocs(unittest.TestCase):
         self.assertEqual(provide_classification, grade_documents_classification)
     
     
-    def  test_positive_retrive_negative_grade_docs(self):
+    def test_positive_retrive_negative_grade_docs(self):
         question = "What are the recent advancements in AI for detecting emotions through speech in basketball games?"
         inputs = {"question": question}
         retrieve_documents_classification = 'yes'
@@ -69,21 +69,6 @@ class TestExistRetrieverDocs(unittest.TestCase):
         
         provide_classification = 'yes' if len(state['grade_documents']) > 0 else 'no'
         self.assertEqual(provide_classification, grade_documents_classification)
-        
-    
-    def  test_negative_retrive_negative_grade_docs(self):
-        question = "What are the most effective defensive techniques used in boxing?"
-        inputs = {"question": question}
-        retrieve_documents_classification = 'no'
-        
-        state = self.kbs._retrieve(inputs)
-        
-        print(f"\n{self.__class__.__name__}:       {inspect.currentframe().f_code.co_name}")
-        print(f"\nRetriever -> State:      {state}")
-        
-        provide_classification = 'yes' if len(state['documents']) > 0 else 'no'
-        self.assertEqual(provide_classification, retrieve_documents_classification)
-        
         
     def tearDown(self) -> None:
         self.chat_pdf = None

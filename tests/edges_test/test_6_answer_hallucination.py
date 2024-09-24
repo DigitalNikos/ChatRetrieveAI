@@ -2,20 +2,19 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import unittest
 import inspect
 
 from rag.rag import ChatPDF
 from config import Config as cfg
-from langchain_core.messages import HumanMessage, AIMessage
-from langchain_core.documents import Document
 
 
 class TestAnswerHallucination(unittest.TestCase):
     def setUp(self):
         cfg.MODEL_TEMPERATURE = 0.0
-        cfg.RETRIEVER_SCORE_THRESHOLD = 0.5
+        
         self.domain = "Sport"
         test_dir = os.path.dirname(__file__)
         file_path = os.path.join(test_dir, '..', 'data', 'Application of Artificial_Intelligence_in_Basketball_Sport.pdf')
@@ -58,7 +57,7 @@ class TestAnswerHallucination(unittest.TestCase):
         self.assertEqual(provide_classification, hallucination_classification, msg="Hallucination classification is not as expected")
         
     
-    def  test_negative_answer_hallucination(self):
+    def test_negative_answer_hallucination(self):
         question = "What are the long-term psychological impacts of AI-assisted coaching on the decision-making skills of basketball players, particularly in high-stakes scenarios like the NBA playoffs?"
         retrieve_documents_classification = 'yes'
         hallucination_classification = 'yes'

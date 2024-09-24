@@ -1,7 +1,9 @@
 import re
 from urllib.parse import urlparse
+
 from langchain_core.documents import Document
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
+
 
 def print_documents(documents):
     """
@@ -40,27 +42,57 @@ def clean_text(chunks, file_name: str):
     return chunks
 
 
+# def convert_str_to_document(input: str):
+#     """
+#     Converts the string input to a list of Document objects
+
+#     Returns:
+#         list: List of Document objects
+#     """
+#     print("text_doc_processing.py - convert_str_to_document()")
+    
+#     # Clean the string from the outer square brackets
+#     cleaned_string = input.strip("[]")
+
+#     # Use regex to split on individual document snippets, titles, and links
+#     items = re.findall(r'snippet:\s*(.*?),\s*title:\s*(.*?),\s*link:\s*(https[^\]]+)', cleaned_string, re.DOTALL)
+
+#     documents = []
+
+#     for snippet, title, link in items:
+#         # Clean up the snippet to remove potential trailing commas or whitespace
+#         snippet = snippet.strip().rstrip(",")
+#         title = title.strip()
+#         link = link.strip()
+
+#         doc = Document(
+#             page_content=snippet,
+#             metadata={'source': link}
+#         )
+#         documents.append(doc)
+
+#     return documents
+
 def convert_str_to_document(input: str):
     """
-    Converts the string input to a list of Document objects
+    Converts the string input to a list of Document objects.
 
     Returns:
         list: List of Document objects
     """
     print("text_doc_processing.py - convert_str_to_document()")
     
-    # Clean the string from the outer square brackets
+    # Clean the string from potential outer square brackets (if any)
     cleaned_string = input.strip("[]")
-
-    # Use regex to split on individual document snippets, titles, and links
-    items = re.findall(r'snippet:\s*(.*?),\s*title:\s*(.*?),\s*link:\s*(https[^\]]+)', cleaned_string, re.DOTALL)
+    
+    # Use regex to split on individual document snippets and links
+    items = re.findall(r'snippet:\s*(.*?),\s*link:\s*(https[^\s,]+)', cleaned_string, re.DOTALL)
 
     documents = []
 
-    for snippet, title, link in items:
+    for snippet, link in items:
         # Clean up the snippet to remove potential trailing commas or whitespace
         snippet = snippet.strip().rstrip(",")
-        title = title.strip()
         link = link.strip()
 
         doc = Document(

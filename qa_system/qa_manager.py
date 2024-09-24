@@ -1,19 +1,27 @@
+from typing import Dict, List
+
 import numexpr as ne
-from tqdm import tqdm
-from typing import List, Dict
 from config import Config as cfg
-from typing_extensions import TypedDict
-from qa_system.lang_graph import WorkflowInitializer
-from langchain_community.chat_models import ChatOllama
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.messages import HumanMessage, AIMessage
 from langchain.chains import create_history_aware_retriever
+from langchain_community.chat_models import ChatOllama
 from langchain_community.tools import DuckDuckGoSearchResults
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.output_parsers import JsonOutputParser
 from langchain_experimental.llms.ollama_functions import OllamaFunctions
-from utils import convert_str_to_document, extract_limited_chat_history, print_documents
-from qa_system.structure_answer import AnswerWithSources, AnswerWithSourcesMath, AnswerWithWebSourcesMath
-from qa_system.prompts import (generate_answer,rephrase_prompt, grader_document_prompt, hallucination_grader_prompt, 
-                               answers_grader_prompt, query_domain_check, question_classifier_prompt,math_solver, math_solver_web)
+from qa_system.lang_graph import WorkflowInitializer
+from qa_system.prompts import (answers_grader_prompt, generate_answer,
+                               grader_document_prompt,
+                               hallucination_grader_prompt, math_solver,
+                               math_solver_web, query_domain_check,
+                               question_classifier_prompt, rephrase_prompt)
+from qa_system.structure_answer import (AnswerWithSources,
+                                        AnswerWithSourcesMath,
+                                        AnswerWithWebSourcesMath,
+                                        AnswerHallucination)
+from tqdm import tqdm
+from typing_extensions import TypedDict
+from utils import (convert_str_to_document, extract_limited_chat_history,
+                   print_documents)
 
 
 class KnowledgeBaseSystem:
@@ -37,30 +45,32 @@ class KnowledgeBaseSystem:
         answer: Dict
 
 
-    def __init__(self):  
+    def __init__(self, retriever):  
         print('knowledge_base_system.py - __init__()')    
-        self.retriever = None
+        self.retriever = retriever
         self.chat_history = []
         self.chat_rephrased_history = []
   
         # LLMs
-        self.json_llm = ChatOllama(model=cfg.MODEL, format=cfg.MODEL_FORMAT, temperature=cfg.MODEL_TEMPERATURE)  
-        self.llm = OllamaFunctions(model=cfg.MODEL, keep_alive=cfg.KEEP_IN_MEMORY, format=cfg.MODEL_FORMAT, temperature=cfg.MODEL_TEMPERATURE) 
+        self.json_llm = ChatOllama(model=cfg.MODEL, keep_alive=cfg.KEEP_IN_MEMORY, format="json", temperature=cfg.MODEL_TEMPERATURE)  
+        self.llm = OllamaFunctions(model=cfg.MODEL, keep_alive=cfg.KEEP_IN_MEMORY, format="json", temperature=cfg.MODEL_TEMPERATURE) 
         
         # STRUCTURED LLMs
         self.structured_llm = self.llm.with_structured_output(AnswerWithSources)
         self.structured_llm_numexpr = self.llm.with_structured_output(AnswerWithSourcesMath)
         self.structured_llm_not_numexpr = self.llm.with_structured_output(AnswerWithWebSourcesMath)
+        self.structured_llm_hallucination = self.llm.with_structured_output(AnswerHallucination)
         
         # CHAINS
         self.generate_answer = generate_answer | self.structured_llm
         self.query_domain_check = query_domain_check | self.json_llm| JsonOutputParser()
         self.rephrase_query_chain = rephrase_prompt | self.json_llm | JsonOutputParser()
         self.retrieval_grader_document_chain = grader_document_prompt | self.json_llm | JsonOutputParser()
-        self.hallucination_grader_chain = hallucination_grader_prompt | self.json_llm | JsonOutputParser()
+        # self.hallucination_grader_chain = hallucination_grader_prompt | self.json_llm | JsonOutputParser()
+        self.hallucination_grader_chain = hallucination_grader_prompt | self.structured_llm_hallucination
         self.answer_grader_chain = answers_grader_prompt | self.json_llm | JsonOutputParser()
         self.question_classifier = question_classifier_prompt | self.json_llm | JsonOutputParser()
-        self.search_ddg_search_results = DuckDuckGoSearchResults(num_results = cfg.N_DDG_TO_RETRIEVE, verbose = True)
+        self.search_ddg_search_results = DuckDuckGoSearchResults(num_results = cfg.N_DDG_TO_RETRIEVE, verbose = True, keys_to_include=['snippet', 'link'])
         self.chain_math_numexpr = math_solver |self.structured_llm_numexpr 
         self.chain_math_not_numexpr = math_solver_web | self.structured_llm_not_numexpr
         
@@ -145,6 +155,7 @@ class KnowledgeBaseSystem:
         documents = chat_retriever_chain.invoke({"input": state["question"], "chat_history": self.chat_history})
         
         print("\nRetrieved Documents:    ")
+        print("DOCUMETS: ", documents)
         print_documents(documents)
         
         state['documents'] = documents
@@ -347,12 +358,14 @@ class KnowledgeBaseSystem:
         
         try:
             score = self.hallucination_grader_chain.invoke({"documents":  state["grade_documents"], "generation": state["answer"]}) 
-            state["hallucination"] = "no" if score["score"] == "yes" else "yes"
+            print("\nScore:      {}".format(score))
+            print("\nScore:      {}".format(type(score)))
+            state["hallucination"] = "no" if score.score == "yes" else "yes"
             
-            if score["score"] == "no":
+            if score.score == "no":
                 state["answer"] = {'answer': "I don't know the answer to that question.", 'metadata': "No metadata"}
             
-            print(f"\nDECISION: generation is {'grounded in documents' if score['score'] == 'yes' else 'not grounded in documents, re-try'}")
+            print(f"\nDECISION: generation is {'grounded in documents' if score.score == 'yes' else 'not grounded in documents, re-try'}")
         except Exception as e:
             print(f"KeyError: {e}. _hallucination_check() - Response may not contain expected fields.")
             state["hallucination"] = "yes"
@@ -415,5 +428,3 @@ class KnowledgeBaseSystem:
         self.chat_rephrased_history.extend([HumanMessage(content=answer['question']), AIMessage(content=answer['answer']['answer'])])   
         return answer
     
-    def set_retriever(self, retriever):
-        self.retriever = retriever

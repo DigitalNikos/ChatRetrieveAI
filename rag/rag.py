@@ -1,16 +1,18 @@
-import chardet
 import time
+
+import chardet
 from config import Config as cfg
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.chat_models import ChatOllama
+from langchain_community.document_loaders import (Docx2txtLoader,
+                                                  PyMuPDFLoader, TextLoader,
+                                                  WebBaseLoader)
+from langchain_core.output_parsers import JsonOutputParser
+from qa_system.qa_manager import KnowledgeBaseSystem
+from rag.rag_prompts import domain_check, domain_detection
 from rag.vectordb import VectorDB
 from utils import clean_text, normalize_documents
-from qa_system.qa_manager import KnowledgeBaseSystem
-from langchain_community.chat_models import ChatOllama
-from langchain_core.output_parsers import JsonOutputParser
-from rag.rag_prompts import domain_detection, domain_check
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, Docx2txtLoader, WebBaseLoader
 
-    
 LOADERS_TYPES = {
     ".pdf": PyMuPDFLoader,
     ".txt": TextLoader,
@@ -24,11 +26,13 @@ class ChatPDF:
     def __init__(self):
         print("rag.py - ChatPDF - __init__()")
 
-        self.json_llm = ChatOllama(model=cfg.MODEL, format= cfg.MODEL_FORMAT, temperature=cfg.MODEL_TEMPERATURE) 
-        self.knowledge_base_system = KnowledgeBaseSystem()
+        self.json_llm = ChatOllama(model=cfg.MODEL, format="json", temperature=cfg.MODEL_TEMPERATURE) 
+        
         self.vector_db = VectorDB()
         self.domain = None
-        self.retriever = None
+        self.retriever = self.vector_db.retriever
+        self.knowledge_base_system = KnowledgeBaseSystem(self.retriever)
+        
         self.domain_checking = domain_check | self.json_llm | JsonOutputParser()
         self.summary_domain_chain = domain_detection | self.json_llm | JsonOutputParser()
     
@@ -92,10 +96,6 @@ class ChatPDF:
             return "no"
         
         self.vector_db.add_documents(chunks)
-        if not self.retriever:
-            self.retriever = self.vector_db.as_retriever()
-            print("Retriever set")
-            self.knowledge_base_system.set_retriever(self.retriever)
         
         end_time = time.time()
         execution_time = end_time - start_time

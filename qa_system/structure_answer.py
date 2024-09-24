@@ -1,7 +1,7 @@
-from typing import List
-from typing import Set
+from typing import List, Set
+
+from pydantic import BaseModel
 from typing_extensions import Annotated
-from langchain_core.pydantic_v1 import BaseModel
 
 
 class AnswerWithSources(BaseModel):
@@ -15,7 +15,6 @@ class AnswerWithSources(BaseModel):
         "The key 'sources' of the Metadata",
     ]
 
-
 class AnswerWithSourcesMath(BaseModel):
     """An Arithmetic Reasoning step wise reasoning to the question, with keys 'step_wise_reasoning', 'expr' and 'sources'.
         'step_wise_reasoning' : The step wise reasoning to the user's question.
@@ -28,7 +27,6 @@ class AnswerWithSourcesMath(BaseModel):
         ...,
         "The key 'sources' of the Metadata from the provided documents",   
     ]
-    
 
 class AnswerWithWebSourcesMath(BaseModel):
     """An Arithmetic Reasoning step wise reasoning to the question, with keys 'step_wise_reasoning', 'solution' and 'sources'.
@@ -42,4 +40,9 @@ class AnswerWithWebSourcesMath(BaseModel):
         ...,
         "The key 'sources' of the Metadata",   
     ]
+    
+class AnswerHallucination(BaseModel):
+    """Answer with 'yes' if the answer is grounded in / supported by a set of facts, 'no' otherwise.
+        'score': the key that it will have the value 'yes' or 'no'."""
+    score: str
     

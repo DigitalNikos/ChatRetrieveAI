@@ -2,16 +2,19 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import unittest
 from rag.rag import ChatPDF
 from config import Config as cfg
 from langchain_core.messages import HumanMessage, AIMessage
+import random
+import numpy as np
 
 class TestPath3(unittest.TestCase):
     def setUp(self):
-        print(cfg)
+        random.seed(42)
+        np.random.seed(42)
         cfg.MODEL_TEMPERATURE = 0.0
         self.domain = "Technology"
         test_dir = os.path.dirname(__file__)

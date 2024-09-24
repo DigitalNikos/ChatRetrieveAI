@@ -1,45 +1,41 @@
-from uuid import uuid4
 from typing import List
+from uuid import uuid4
+
 from config import Config as cfg
+from langchain_community.embeddings import HuggingFaceBgeEmbeddings
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_core.documents import Document
-# from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
-# from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain_milvus import Milvus
 from langchain_ollama import OllamaEmbeddings
-from langchain_community.vectorstores.utils import filter_complex_metadata
-from langchain_community.vectorstores import Chroma
 
 
 class VectorDB:
     def __init__(self):
         print("vectordb.py - __init__()")
-        
-        self.embedding =  OllamaEmbeddings(model="nomic-embed-text")
-        self.vector_store = None
 
-    def initialize(self, chunks: List[Document]):
-        print("vectordb.py - initialize()")
+        model_name = "BAAI/bge-large-en"
+        model_kwargs = {'device': 'cpu'}
+        encode_kwargs = {'normalize_embeddings': True}
+        self.hf = HuggingFaceBgeEmbeddings(
+            model_name=model_name,
+            model_kwargs=model_kwargs,
+            encode_kwargs=encode_kwargs
+        )
         
-        self.vector_store = Chroma.from_documents(documents=chunks, collection_name="rag-chroma", embedding= self.embedding)
-      
+        self.vector_store =  Milvus(
+            collection_name = cfg.COLLECTION_NAME,
+            embedding_function= self.hf,
+            connection_args={"uri": cfg.URI},
+            drop_old = True
+        )
+        
+        self.retriever = self.vector_store.as_retriever()
+        
+        
     def add_documents(self, chunks: List[Document]):
         print("vectordb.py - add_documents()")
-        
-        if not self.vector_store:
-            self.initialize(chunks)
-        else:
-            self.vector_store.add_documents(chunks)
+        uuids = [str(uuid4()) for _ in range(len(chunks))]
+
+        self.vector_store.add_documents(documents=chunks, ids=uuids)
         
 
-    def as_retriever(self):
-        print("vectordb.py - as_retriever()")
-        
-        if not self.vector_store:
-            raise ValueError("Vector store is not initialized with documents yet.")
-        
-        return self.vector_store.as_retriever(
-            search_type= cfg.SEARCH_TYPE,
-            search_kwargs={
-                "k": cfg.N_DOCUMENTS_TO_RETRIEVE,
-                "score_threshold": cfg.RETRIEVER_SCORE_THRESHOLD,
-            },
-        )

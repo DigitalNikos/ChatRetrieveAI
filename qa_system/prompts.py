@@ -1,7 +1,6 @@
-from langchain.prompts import PromptTemplate
 from langchain.output_parsers import ResponseSchema, StructuredOutputParser
+from langchain.prompts import PromptTemplate
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-
 
 response_schemas_domain_check = [
     ResponseSchema(
@@ -96,24 +95,23 @@ generate_answer = PromptTemplate(
 )
 
 
-response_schemas_hallucination = [
-            ResponseSchema(
-                name="score", 
-                description="Answer with 'yes' if the answer is grounded in / supported by a set of facts, 'no' otherwise.")
-        ]
-output_parser_hallucination = StructuredOutputParser.from_response_schemas(response_schemas_hallucination)
-format_instructions_hallucination = output_parser_hallucination.get_format_instructions()
+# response_schemas_hallucination = [
+#             ResponseSchema(
+#                 name="score", 
+#                 description="Answer with 'yes' if the answer is grounded in / supported by a set of facts, 'no' otherwise.")
+#         ]
+# output_parser_hallucination = StructuredOutputParser.from_response_schemas(response_schemas_hallucination)
+# format_instructions_hallucination = output_parser_hallucination.get_format_instructions()
 hallucination_grader_prompt = PromptTemplate(
     template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
     You are a grader assessing whether an answer is grounded in / supported by a set of facts. 
     Here are the facts: {documents} 
-    Here is the answer: {generation}.
     <|eot_id|><|begin_of_text|><|start_header_id|>user<|end_header_id|>
-    format instructions: {format_instructions}
+    Here is the answer: {generation}.
     <|eot_id|><|start_header_id|>assistant<|end_header_id|>
     """,
     input_variables=["generation", "documents"],
-    partial_variables={"format_instructions": format_instructions_hallucination},
+    # partial_variables={"format_instructions": format_instructions_hallucination},
 )
 
 
@@ -127,8 +125,8 @@ format_instructions_answer_grader = output_parser__answer_grader.get_format_inst
 answers_grader_prompt = PromptTemplate(
     template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
     You are a grader assessing whether an answer is useful to resolve a question.
-    Here is the answer: {generation}. 
-    Here is the question: {question}
+    Question: {question}
+    Answer: {generation}. 
     <|eot_id|><|begin_of_text|><|start_header_id|>user<|end_header_id|>
     format instructions: {format_instructions}
     <|eot_id|><|start_header_id|>assistant<|end_header_id|>

@@ -12,3 +12,6 @@ env.bak/
 
 .DS_Store
 .deepeval
+
+.vector.db.lock
+vector.db

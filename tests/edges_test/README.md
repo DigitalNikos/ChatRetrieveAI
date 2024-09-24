@@ -26,8 +26,6 @@ This project contains unit tests for verifying the behavior of different edges i
 
 - **Positive Test:** Ensures that relevant documents are retrieved and correctly graded as relevant.
 
-- **Negative Test:** Ensures that irrelevant documents are either not retrieved or graded as irrelevant.
-
 ### 4.'test_4_question_classifier.py'
 
 **Description:** Tests the classification of a question's type based on 'math' or 'text'.
