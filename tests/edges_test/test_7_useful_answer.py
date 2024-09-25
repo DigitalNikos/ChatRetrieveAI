@@ -2,7 +2,6 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import unittest
 import inspect
@@ -14,7 +13,6 @@ class TestUsefulAnswer(unittest.TestCase):
     def setUp(self):
         cfg.MODEL_TEMPERATURE = 0.0
         self.chat_pdf = ChatPDF()
-        self.kbs = self.chat_pdf.knowledge_base_system
 
     
     def test_positive_useful_answer(self):
@@ -27,7 +25,7 @@ class TestUsefulAnswer(unittest.TestCase):
         usuful_answer_classification = 'useful'
         
         inputs = {"question": question, "answer": generation}
-        state = self.kbs._answer_check(inputs)
+        state = self.chat_pdf.knowledge_base_system._answer_check(inputs)
         
         print(f"\n{self.__class__.__name__}:       {inspect.currentframe().f_code.co_name}")
         print(f"\nAnswer_check -> State:      {state}")
@@ -47,7 +45,7 @@ class TestUsefulAnswer(unittest.TestCase):
         usuful_answer_classification = 'not useful'
         
         inputs = {"question": question, "answer": generation}
-        state = self.kbs._answer_check(inputs)
+        state = self.chat_pdf.knowledge_base_system._answer_check(inputs)
         
         print(f"\n{self.__class__.__name__}:       {inspect.currentframe().f_code.co_name}")
         print(f"\nAnswer_check -> State:      {state}")
@@ -58,7 +56,6 @@ class TestUsefulAnswer(unittest.TestCase):
         
     def tearDown(self) -> None:
         self.chat_pdf = None
-        self.kbs = None
         return super().tearDown()
 
 if __name__ == '__main__':

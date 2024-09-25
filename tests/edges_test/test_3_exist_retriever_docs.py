@@ -2,7 +2,6 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import unittest
 import inspect
@@ -22,7 +21,7 @@ class TestExistRetrieverDocs(unittest.TestCase):
         file_name = "Application of Artificial_Intelligence_in_Basketball_Sport.pdf"
         self.chat_pdf = ChatPDF()
         self.chat_pdf.ingest({'file_path': file_path, 'source_extension': source_extension, 'file_name': file_name, 'domain': self.domain})
-        self.kbs = self.chat_pdf.knowledge_base_system
+    
     
     
     def test_positive_retrive_positive_grade_docs(self):      
@@ -31,7 +30,7 @@ class TestExistRetrieverDocs(unittest.TestCase):
         retrieve_documents_classification = 'yes'
         grade_documents_classification = 'yes'
         
-        state = self.kbs._retrieve(inputs)
+        state = self.chat_pdf.knowledge_base_system._retrieve(inputs)
         
         print(f"\n{self.__class__.__name__}:       {inspect.currentframe().f_code.co_name}")
         print(f"\nRetriever -> State:      {state}")
@@ -40,7 +39,7 @@ class TestExistRetrieverDocs(unittest.TestCase):
         self.assertEqual(provide_classification, retrieve_documents_classification)
         
         inputs = {"question": state['question'], 'documents': state['documents']}
-        state = self.kbs._grade_documents(inputs)
+        state = self.chat_pdf.knowledge_base_system._grade_documents(inputs)
         
         print(f"\nGrade_documents -> State:      {state}")
         
@@ -54,7 +53,7 @@ class TestExistRetrieverDocs(unittest.TestCase):
         retrieve_documents_classification = 'yes'
         grade_documents_classification = 'no'
         
-        state = self.kbs._retrieve(inputs)
+        state = self.chat_pdf.knowledge_base_system._retrieve(inputs)
         
         print(f"\n{self.__class__.__name__}:       {inspect.currentframe().f_code.co_name}")
         print(f"\nRetriever -> State:      {state}")
@@ -63,7 +62,7 @@ class TestExistRetrieverDocs(unittest.TestCase):
         self.assertEqual(provide_classification, retrieve_documents_classification)
         
         inputs = {"question": state['question'], 'documents': state['documents']}
-        state = self.kbs._grade_documents(inputs)
+        state = self.chat_pdf.knowledge_base_system._grade_documents(inputs)
         
         print(f"\nGrade_documents -> State:      {state}")
         
@@ -72,7 +71,6 @@ class TestExistRetrieverDocs(unittest.TestCase):
         
     def tearDown(self) -> None:
         self.chat_pdf = None
-        self.kbs = None
         self.domain = None
         return super().tearDown()
 

@@ -2,7 +2,6 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import unittest
 import inspect
@@ -16,7 +15,6 @@ class TestDomainRelevance(unittest.TestCase):
         cfg.MODEL_TEMPERATURE = 0.0
         self.domain = "Sport"
         self.chat_pdf = ChatPDF()
-        self.kbs = self.chat_pdf.knowledge_base_system
     
     
     def test_positive_domain_relavance(self):
@@ -24,7 +22,7 @@ class TestDomainRelevance(unittest.TestCase):
         inputs = {"question": question, "domain": self.domain}
         expected_classification = 'yes'
         
-        state = self.kbs._check_query_domain(inputs)
+        state = self.chat_pdf.knowledge_base_system._check_query_domain(inputs)
         
         print(f"\n{self.__class__.__name__}:       {inspect.currentframe().f_code.co_name}")
         print(f"\nCheck_query_domain -> State:      {state}")
@@ -38,7 +36,7 @@ class TestDomainRelevance(unittest.TestCase):
         inputs = {"question": question, "domain": self.domain}
         expected_classification = 'no'
         
-        state = self.kbs._check_query_domain(inputs)
+        state = self.chat_pdf.knowledge_base_system._check_query_domain(inputs)
         
         print(f"\n{self.__class__.__name__}:       {inspect.currentframe().f_code.co_name}")
         print(f"\nCheck_query_domain -> State:      {state}")
@@ -46,10 +44,9 @@ class TestDomainRelevance(unittest.TestCase):
         self.assertEqual(state['question'], question)
         self.assertEqual(state['q_domain_relevance'], expected_classification)
         
-        
+   
     def tearDown(self) -> None:
-        self.chat_pdf = None
-        self.kbs = None
+        self.chat_pdf = None    
         self.domain = None
         return super().tearDown()
 

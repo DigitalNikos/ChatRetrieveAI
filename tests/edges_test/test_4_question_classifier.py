@@ -2,7 +2,6 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',"..")))
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import unittest
 import inspect
@@ -15,8 +14,7 @@ class TestQuestionClassifier(unittest.TestCase):
     def setUp(self):
         cfg.MODEL_TEMPERATURE = 0.0
         self.domain = "Sport"
-        chat_pdf = ChatPDF()
-        self.kbs = chat_pdf.knowledge_base_system
+        self.chat_pdf = ChatPDF()
     
     
     def test_positive_question_classifier(self):    
@@ -24,7 +22,7 @@ class TestQuestionClassifier(unittest.TestCase):
         inputs = {"question": question}
         expected_classification = 'yes'
         
-        state = self.kbs._question_classifier(inputs)
+        state = self.chat_pdf.knowledge_base_system._question_classifier(inputs)
         
         print(f"\n{self.__class__.__name__}:       {inspect.currentframe().f_code.co_name}")
         print(f"\nQuestion_classifier -> State:      {state}")
@@ -37,7 +35,7 @@ class TestQuestionClassifier(unittest.TestCase):
         inputs = {"question": question}
         expected_classification = 'no'
         
-        state = self.kbs._question_classifier(inputs)
+        state = self.chat_pdf.knowledge_base_system._question_classifier(inputs)
         
         print(f"\n{self.__class__.__name__}:       {inspect.currentframe().f_code.co_name}")
         print(f"\nQuestion_classifier -> State:      {state}")
@@ -47,7 +45,6 @@ class TestQuestionClassifier(unittest.TestCase):
         
         
     def tearDown(self) -> None:
-        self.kbs = None
         self.domain = None
         self.chat_pdf = None
         return super().tearDown()

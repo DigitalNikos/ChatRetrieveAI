@@ -2,7 +2,6 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import unittest
 from rag.rag import ChatPDF
@@ -53,8 +52,6 @@ class TestPath5(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.chat_pdf = None
-        self.kbs = None
-        self.domain = None
         return super().tearDown()
 
 if __name__ == '__main__':

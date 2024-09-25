@@ -2,7 +2,6 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import unittest
 import inspect
@@ -17,8 +16,7 @@ class TestRephraseQuestion(unittest.TestCase):
         cfg.MODEL_TEMPERATURE = 0.0
         self.domain = "Sport"
         self.chat_pdf = ChatPDF()
-        self.kbs = self.chat_pdf.knowledge_base_system
-        self.kbs.chat_rephrased_history.extend([HumanMessage(
+        self.chat_pdf.knowledge_base_system.chat_rephrased_history.extend([HumanMessage(
                                         content="What is AI's role in predicting basketball game outcomes?"
                                     ), 
                                       AIMessage(
@@ -28,16 +26,16 @@ class TestRephraseQuestion(unittest.TestCase):
     
     def test_positive_rephrased_quesiton(self):
         question = "What are some key metrics analyzed?"
-        inputs = {"question": question, 'chat_history': self.kbs.chat_rephrased_history}
+        inputs = {"question": question, 'chat_history': self.chat_pdf.knowledge_base_system.chat_rephrased_history}
         expected_classification = 'yes'
         
-        state = self.kbs._rephrase_query(inputs)
+        state = self.chat_pdf.knowledge_base_system._rephrase_query(inputs)
         
         print(f"\n{self.__class__.__name__}:       {inspect.currentframe().f_code.co_name}")
         print(f"\nRephrase_query -> State:      {state}")
         
         inputs = {"question": state['question'], "domain": self.domain}
-        state = self.kbs._check_query_domain(inputs)
+        state = self.chat_pdf.knowledge_base_system._check_query_domain(inputs)
         
         print(f"\nCheck_query_domain -> State:      {state}")
  
@@ -46,16 +44,16 @@ class TestRephraseQuestion(unittest.TestCase):
         
     def test_negative_rephrased_quesiton(self):
         question = "How is the weather today?"
-        inputs = {"question": question, 'chat_history': self.kbs.chat_rephrased_history}
+        inputs = {"question": question, 'chat_history': self.chat_pdf.knowledge_base_system.chat_rephrased_history}
         expected_classification = 'no'
         
-        state = self.kbs._rephrase_query(inputs)
+        state = self.chat_pdf.knowledge_base_system._rephrase_query(inputs)
         
         print(f"\n{self.__class__.__name__}:       {inspect.currentframe().f_code.co_name}")
         print(f"\nRephrase_query -> State:      {state}")
         
         inputs = {"question":  state['question'], "domain": self.domain}
-        state = self.kbs._check_query_domain(inputs)
+        state = self.chat_pdf.knowledge_base_system._check_query_domain(inputs)
         
         print(f"\nRephrase_query -> State:      {state}")
         
@@ -63,9 +61,8 @@ class TestRephraseQuestion(unittest.TestCase):
             
         
     def tearDown(self) -> None:
-        self.kbs.chat_rephrased_history.clear()
+        self.chat_pdf.knowledge_base_system.chat_rephrased_history.clear()
         self.domain = None
-        self.kbs = None
         self.chat_pdf = None
         return super().tearDown()
 

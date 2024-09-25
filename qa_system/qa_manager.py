@@ -384,7 +384,7 @@ class KnowledgeBaseSystem:
             print("\nAnswer:      {}".format(state["answer"]['answer']))
             
             score = self.answer_grader_chain.invoke({"question": state["question"], "generation": state["answer"]})
-            print("\nScore:      {}".format(score))
+
             state["answer_useful"] = "useful" if score["score"] == "yes" else "not useful"
             print(f"\nDECISION: generation {'addresses' if score['score'] == 'yes' else 'does not address'} question")
             

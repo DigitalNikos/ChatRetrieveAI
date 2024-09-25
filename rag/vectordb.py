@@ -36,5 +36,7 @@ class VectorDB:
         
         uuids = [str(uuid4()) for _ in range(len(chunks))]
         self.vector_store.add_documents(documents=chunks, ids=uuids)
+    
+
         
 

@@ -87,8 +87,11 @@ The following diagram provides an overview of the project’s architecture, illu
 
 The application settings can be modified in the config.py file. Key settings include:
 
-- MODEL: Specifies the language model to use for generating responses.
+- MODEL: Specifies the language model to use for generating responses (e.g., "llama3.1").
+- MODEL_TEMPERATURE: Controls the randomness of the model's responses. Lower values make the output more deterministic.
+- KEEP_IN_MEMORY: Determines whether to keep certain data in memory for faster access.
 - SPLITTER_CHUNK_SIZE: Defines the size of text chunks when splitting documents for processing.
 - SPLITTER_CHUNK_OVERLAP: Determines how much overlap there should be between chunks to maintain context.
-- N_DOCUMENTS_TO_RETRIEVE: Sets the number of documents to retrieve per query to ensure relevance.
-- RETRIEVER_SCORE_THRESHOLD: Sets a minimum relevance score for documents to be considered in responses.
+- COLLECTION_NAME: The name of the collection where document vectors are stored (default: "rag_chroma").
+- URI: The path to the database used for storing and retrieving document vectors.
+- N_DDG_TO_RETRIEVE: Sets the number of documents to retrieve from DuckDuckGo per query to ensure relevance

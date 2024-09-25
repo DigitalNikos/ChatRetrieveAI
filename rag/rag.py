@@ -35,7 +35,8 @@ class ChatPDF:
         
         self.domain_checking = domain_check | self.json_llm | JsonOutputParser()
         self.summary_domain_chain = domain_detection | self.json_llm | JsonOutputParser()
-    
+
+        
     
     def detect_encoding(self,file_path):
         print("rag.py - detect_encoding()")
@@ -119,7 +120,7 @@ class ChatPDF:
             metadata = state["answer"]['metadata']
             return f"{response}\n\nMetadata: {metadata}"
         else:
-            return "Question classification failed."
+            return "Question out of domain."
     
     
     def invoke(self, state):
